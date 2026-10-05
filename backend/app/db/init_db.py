@@ -1,13 +1,14 @@
 """
 Database initialization and health verification utility for CareerCrew.
 Creates all SQLite tables and provides status introspection.
+Includes automatic lightweight column migrations for backward compatibility.
 """
 
 from typing import Dict, Any, List
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from app.db.base import Base
 from app.db.session import engine
-from app.models import Resume, JobDescription, Project, Application, AnalysisRun
+from app.models import Resume, JobDescription, Project, Application, AnalysisRun, EvidenceRecord
 from app.core.logging import logger
 
 
@@ -16,6 +17,27 @@ def init_db(target_engine=None) -> None:
     eng = target_engine or engine
     logger.info("Initializing SQLite database tables...")
     Base.metadata.create_all(bind=eng)
+
+    # Lightweight SQLite column migration for Phase 3 Project columns
+    try:
+        with eng.connect() as conn:
+            inspector = inspect(eng)
+            if "projects" in inspector.get_table_names():
+                columns = {c["name"] for c in inspector.get_columns("projects")}
+                if "git_remote" not in columns:
+                    conn.execute(text("ALTER TABLE projects ADD COLUMN git_remote VARCHAR(512)"))
+                if "git_branch" not in columns:
+                    conn.execute(text("ALTER TABLE projects ADD COLUMN git_branch VARCHAR(255)"))
+                if "head_commit" not in columns:
+                    conn.execute(text("ALTER TABLE projects ADD COLUMN head_commit VARCHAR(64)"))
+                if "commit_count" not in columns:
+                    conn.execute(text("ALTER TABLE projects ADD COLUMN commit_count INTEGER DEFAULT 0"))
+                if "last_scanned_at" not in columns:
+                    conn.execute(text("ALTER TABLE projects ADD COLUMN last_scanned_at DATETIME"))
+                conn.commit()
+    except Exception as exc:
+        logger.warning(f"Note during SQLite table migration: {exc}")
+
     logger.info("Database tables initialized successfully.")
 
 
@@ -25,7 +47,14 @@ def check_db_health(target_engine=None) -> Dict[str, Any]:
         eng = target_engine or engine
         inspector = inspect(eng)
         existing_tables: List[str] = inspector.get_table_names()
-        expected_tables = ["resumes", "job_descriptions", "projects", "applications", "analysis_runs"]
+        expected_tables = [
+            "resumes",
+            "job_descriptions",
+            "projects",
+            "applications",
+            "analysis_runs",
+            "evidence_records",
+        ]
         all_present = all(t in existing_tables for t in expected_tables)
 
         return {

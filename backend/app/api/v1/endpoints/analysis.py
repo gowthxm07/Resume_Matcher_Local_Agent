@@ -16,6 +16,9 @@ from app.ingestion.parser import DocumentParser, sanitize_filename
 from app.services.extractor_service import extractor_service
 from app.services.matching_engine import matching_engine
 from app.schemas.intelligence import AnalysisResult
+from app.schemas.evidence import EvidenceAssessment
+from app.services.evidence_service import evidence_service
+
 
 
 router = APIRouter()
@@ -218,3 +221,39 @@ async def list_recent_analyses(limit: int = 10, db: Session = Depends(get_db)) -
             "summary": r.results_summary.get("summary_explanation", "") if r.results_summary else "",
         })
     return items
+
+
+@router.get("/analysis/{analysis_id}/evidence", response_model=EvidenceAssessment, tags=["Match Intelligence"])
+async def get_analysis_evidence(analysis_id: str, db: Session = Depends(get_db)) -> EvidenceAssessment:
+    """
+    Generate or retrieve evidence-grounded verification linking:
+    Job Requirement -> Resume Claim -> Candidate Project -> Repository Evidence.
+    Computes an independent Evidence Confidence Score.
+    """
+    run = db.scalar(select(AnalysisRun).where(AnalysisRun.id == analysis_id))
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Analysis run '{analysis_id}' not found")
+    if not run.results_summary:
+        raise HTTPException(status_code=404, detail="Analysis results summary is empty")
+
+    analysis_res = AnalysisResult(**run.results_summary)
+    resume_profile = None
+    job_profile = None
+
+    # Retrieve profiles from resume and JD if available
+    if run.resume_id:
+        resume_record = db.scalar(select(Resume).where(Resume.id == run.resume_id))
+        if resume_record and resume_record.raw_text:
+            resume_profile = await extractor_service.extract_resume(resume_record.raw_text)
+
+    if run.job_description_id:
+        jd_record = db.scalar(select(JobDescription).where(JobDescription.id == run.job_description_id))
+        if jd_record and jd_record.raw_text:
+            job_profile = await extractor_service.extract_job_description(jd_record.raw_text)
+
+    return evidence_service.build_evidence_chain(
+        resume=resume_profile,
+        job=job_profile,
+        db=db,
+    )
+

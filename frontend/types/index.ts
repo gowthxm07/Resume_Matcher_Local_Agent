@@ -145,5 +145,78 @@ export interface AnalysisResult {
   analysis_run_id?: string;
   resume_id?: string;
   job_description_id?: string;
+  evidence_assessment?: EvidenceAssessment;
 }
+
+export type ConfidenceLevel = "VERIFIED" | "LIKELY" | "WEAK" | "UNVERIFIED";
+
+export interface EvidenceItem {
+  id: string;
+  project_id: string;
+  project_name?: string;
+  technology: string;
+  canonical_skill: string;
+  evidence_type: string;
+  source_file: string;
+  source_location?: string | null;
+  description: string;
+  confidence: number;
+  confidence_level: ConfidenceLevel;
+  detector: string;
+  snippet?: string | null;
+  created_at?: string;
+}
+
+export interface ProjectResponse {
+  id: string;
+  name: string;
+  description: string;
+  repo_path: string;
+  status: string;
+  git_remote?: string | null;
+  git_branch?: string | null;
+  head_commit?: string | null;
+  commit_count?: number;
+  last_scanned_at?: string | null;
+  evidence_count: number;
+  detected_technologies: string[];
+  created_at: string;
+}
+
+export interface SkillVerificationResult {
+  skill: string;
+  canonical_skill: string;
+  status: ConfidenceLevel;
+  confidence: number;
+  projects: string[];
+  evidence_count: number;
+  evidence_records: EvidenceItem[];
+  summary: string;
+}
+
+export interface EvidenceChainItem {
+  requirement: string;
+  canonical_skill: string;
+  requirement_type: string;
+  resume_claimed: boolean;
+  resume_evidence?: string | null;
+  projects_found: string[];
+  verification_status: ConfidenceLevel;
+  verification_confidence: number;
+  repository_evidence: EvidenceItem[];
+  rationale: string;
+}
+
+export interface EvidenceAssessment {
+  evidence_confidence_score: number;
+  verified_skills_count: number;
+  likely_skills_count: number;
+  weak_skills_count: number;
+  unverified_skills_count: number;
+  evidence_coverage_percentage: number;
+  chain: EvidenceChainItem[];
+  scanned_projects_count: number;
+  timestamp: string;
+}
+
 

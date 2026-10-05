@@ -6,8 +6,9 @@ Used by the future Evidence Agent to ground resume claims in real git history / 
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy import String, DateTime, Text, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, generate_uuid, utc_now
+
 
 
 class Project(Base):
@@ -27,11 +28,23 @@ class Project(Base):
     evidence_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSON, nullable=True, default=dict
     )
+    git_remote: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    git_branch: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    head_commit: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    commit_count: Mapped[Optional[int]] = mapped_column(nullable=True, default=0)
+    last_scanned_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    # Relationships
+    evidence_records = relationship(
+        "EvidenceRecord", back_populates="project", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

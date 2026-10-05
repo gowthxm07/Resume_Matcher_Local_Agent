@@ -17,11 +17,14 @@ import {
   Filter,
   RefreshCw,
   FolderGit2,
+  FileCode,
   ArrowRight,
   Zap,
 } from "lucide-react";
-import { analyzeMatch } from "@/lib/api";
-import { AnalysisResult, RequirementMatchResult } from "@/types";
+
+import { analyzeMatch, fetchAnalysisEvidence } from "@/lib/api";
+import { AnalysisResult, RequirementMatchResult, EvidenceAssessment } from "@/types";
+
 
 const SAMPLE_RESUME = `Alex Chen
 alex.chen@example.com | (555) 321-9876 | github.com/alexchen-dev
@@ -87,6 +90,8 @@ export default function AnalysisPage() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [evidenceAssessment, setEvidenceAssessment] = useState<EvidenceAssessment | null>(null);
+  const [loadingEvidence, setLoadingEvidence] = useState<boolean>(false);
 
   const [filterStatus, setFilterStatus] = useState<"all" | "match" | "partial_match" | "missing">("all");
   const [filterType, setFilterType] = useState<"all" | "required" | "preferred">("all");
@@ -106,7 +111,9 @@ export default function AnalysisPage() {
     setJdFile(null);
     setError(null);
     setResult(null);
+    setEvidenceAssessment(null);
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +144,20 @@ export default function AnalysisPage() {
       setStatusMessage("Computing embedding similarities and scoring dimensions...");
       const data: AnalysisResult = await analyzeMatch(formData);
       setResult(data);
+
+      if (data.analysis_run_id) {
+        try {
+          setStatusMessage("Correlating local repository evidence against claims...");
+          setLoadingEvidence(true);
+          const evData = await fetchAnalysisEvidence(data.analysis_run_id);
+          setEvidenceAssessment(evData);
+        } catch (evErr) {
+          console.warn("Evidence correlation skipped:", evErr);
+        } finally {
+          setLoadingEvidence(false);
+        }
+      }
+
     } catch (err: any) {
       setError(err?.message || "Failed to analyze match. Ensure the local backend and Ollama are running.");
     } finally {
@@ -662,7 +683,145 @@ export default function AnalysisPage() {
             </div>
           )}
 
+          {/* Phase 3: Evidence Grounding & Verification Card */}
+          {evidenceAssessment && (
+
+            <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border space-y-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                      <FolderGit2 className="w-4 h-4" />
+                    </span>
+                    <h3 className="text-base font-bold text-white tracking-tight">
+                      Repository Evidence Verification (Phase 3)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Direct validation of technical claims against registered local software repositories and commit history.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
+                    {evidenceAssessment.scanned_projects_count} Repositories Scanned
+                  </span>
+                </div>
+              </div>
+
+              {/* Dual Score Comparison & Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-surface-border space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Baseline Match Score</span>
+                  <div className="text-2xl font-extrabold text-indigo-400">
+                    {result.overall_score}%
+                  </div>
+                  <p className="text-[11px] text-slate-500">Phase 2 resume-to-JD semantic score</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/20 space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-emerald-400">Evidence Confidence Score</span>
+                  <div className="text-2xl font-extrabold text-emerald-400">
+                    {evidenceAssessment.evidence_confidence_score}%
+                  </div>
+                  <p className="text-[11px] text-slate-500">Backed by genuine local repository proof</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-surface-border space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Grounded Skills</span>
+                  <div className="text-2xl font-extrabold text-white">
+                    {evidenceAssessment.verified_skills_count + evidenceAssessment.likely_skills_count}
+                    <span className="text-xs font-normal text-slate-500 ml-1">
+                      / {evidenceAssessment.chain.length}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {evidenceAssessment.verified_skills_count} verified &bull; {evidenceAssessment.likely_skills_count} likely
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-surface-border space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-slate-400">Evidence Coverage</span>
+                  <div className="text-2xl font-extrabold text-sky-400">
+                    {evidenceAssessment.evidence_coverage_percentage}%
+                  </div>
+                  <p className="text-[11px] text-slate-500">Requirements verified in repos</p>
+                </div>
+              </div>
+
+              {/* 4-Part Evidence Chain */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase text-slate-300 tracking-wider">
+                  Requirement Evidence Verification Chain
+                </h4>
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {evidenceAssessment.chain.map((item, cIdx) => (
+                    <div
+                      key={cIdx}
+                      className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{item.requirement}</span>
+                          <span className="text-[10px] font-mono text-slate-500">({item.canonical_skill})</span>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            item.verification_status === "VERIFIED"
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                              : item.verification_status === "LIKELY"
+                              ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
+                              : item.verification_status === "WEAK"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                              : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                          }`}
+                        >
+                          {item.verification_status} ({Math.round(item.verification_confidence * 100)}%)
+                        </span>
+                      </div>
+
+                      {/* 4-Stage Trace */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800/80">
+                        <div>
+                          <span className="text-slate-500 block text-[10px] uppercase font-mono">Resume Claim</span>
+                          <span className={item.resume_claimed ? "text-emerald-300 font-medium" : "text-slate-400"}>
+                            {item.resume_claimed ? "✓ Claimed on Resume" : "— Not Mentioned"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px] uppercase font-mono">Supporting Projects</span>
+                          <span className="text-slate-300">
+                            {item.projects_found && item.projects_found.length > 0
+                              ? item.projects_found.join(", ")
+                              : "None found"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px] uppercase font-mono">Grounding Rationale</span>
+                          <span className="text-slate-400">{item.rationale}</span>
+                        </div>
+                      </div>
+
+                      {/* Code/File Evidence Snippet */}
+                      {item.repository_evidence && item.repository_evidence.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-slate-800/60 flex flex-wrap gap-2 text-[10px] font-mono">
+                          {item.repository_evidence.map((ev, eIdx) => (
+                            <span key={eIdx} className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-indigo-300 flex items-center gap-1">
+                              <FileCode className="w-3 h-3 text-slate-500" />
+                              {ev.source_file} ({ev.evidence_type})
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Detailed Requirement Match Deep-Dive */}
+
           <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-4">
               <div>

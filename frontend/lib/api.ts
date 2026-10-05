@@ -1,4 +1,13 @@
-import { SystemStatusResponse, AgentArchitectureSummary, DatabaseSummary } from "@/types";
+import {
+  SystemStatusResponse,
+  AgentArchitectureSummary,
+  DatabaseSummary,
+  ProjectResponse,
+  EvidenceItem,
+  SkillVerificationResult,
+  EvidenceAssessment,
+} from "@/types";
+
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
@@ -97,3 +106,73 @@ export async function fetchRecentAnalyses() {
 
   return res.json();
 }
+
+export async function registerProject(
+  name: string,
+  path: string,
+  description?: string
+): Promise<ProjectResponse> {
+  const res = await fetch(`${API_BASE}/projects/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, path, description: description || "" }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Registration failed" }));
+    throw new Error(errorData.detail || `Registration failed with HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function fetchProjects(): Promise<ProjectResponse[]> {
+  const res = await fetch(`${API_BASE}/projects`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch projects: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchProject(projectId: string): Promise<ProjectResponse> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch project: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function scanProject(projectId: string): Promise<ProjectResponse> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/scan`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`Failed to scan project: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchProjectEvidence(
+  projectId: string,
+  technology?: string
+): Promise<EvidenceItem[]> {
+  const query = technology ? `?technology=${encodeURIComponent(technology)}` : "";
+  const res = await fetch(`${API_BASE}/projects/${projectId}/evidence${query}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch project evidence: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function verifySkills(skills: string[]): Promise<SkillVerificationResult[]> {
+  const res = await fetch(`${API_BASE}/projects/verify-skills`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ skills }),
+  });
+  if (!res.ok) throw new Error(`Failed to verify skills: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchAnalysisEvidence(analysisId: string): Promise<EvidenceAssessment> {
+  const res = await fetch(`${API_BASE}/analysis/${analysisId}/evidence`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch analysis evidence: HTTP ${res.status}`);
+  return res.json();
+}
+

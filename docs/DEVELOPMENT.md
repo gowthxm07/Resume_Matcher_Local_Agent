@@ -201,3 +201,59 @@ curl -X POST http://127.0.0.1:8000/api/analysis/match \
   -F "jd_text=Looking for a Senior Python Developer with FastAPI and PostgreSQL experience."
 ```
 
+---
+
+## 9. Phase 3: Project Evidence & Verification Testing
+
+### 9.1 Registering and Scanning Projects
+Register a local candidate repository via API:
+```bash
+curl -X POST http://127.0.0.1:8000/api/projects/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Backend Service", "path": "D:\\Projects\\BackendService"}'
+```
+
+Scan the repository for evidence:
+```bash
+curl -X POST http://127.0.0.1:8000/api/projects/1/scan
+```
+
+Query indexed evidence records:
+```bash
+curl http://127.0.0.1:8000/api/projects/1/evidence
+```
+
+### 9.2 Verifying Candidate Skills
+Verify a list of technical skills against registered projects:
+```bash
+curl -X POST http://127.0.0.1:8000/api/projects/verify-skills \
+  -H "Content-Type: application/json" \
+  -d '{"skills": ["FastAPI", "PostgreSQL", "Docker", "Kubernetes"]}'
+```
+
+### 9.3 Running All Unit & Integration Tests (89 Tests)
+Run the entire backend test suite across Phase 1, Phase 2, and Phase 3:
+```bash
+cd backend
+python -m pytest tests -v
+```
+All 89 tests pass:
+- **Phase 1**: Health, Ingestion, Database, Ollama Service, Agent Blueprint (28 tests)
+- **Phase 2**: Intelligence Schemas, Skill Normalizer, Requirement Classifier, Extractor, Project Relevance, Matching Engine, Evaluation Dataset (34 tests)
+- **Phase 3**: Path Validator, Safe Git Scanner, Technology Detectors, Evidence Service, Projects API (27 tests)
+
+### 9.4 Automated Phase 3 Verification
+Execute the automated Phase 3 verification script:
+```bash
+python scripts/verify_phase3.py
+```
+This script verifies:
+1. Local Ollama & zero cloud API constraint.
+2. Path security validator (blocks root, system dirs, data dirs, path traversal).
+3. Safe Git scanner (metadata, sanitized remotes, non-git fallback).
+4. Modular technology detectors (Python, Package.json, Docker/Compose, Source code, Readme).
+5. Evidence service & confidence hierarchy (`VERIFIED` $\ge 0.85$, `LIKELY` $\ge 0.65$, `WEAK` $\le 0.45$, `UNVERIFIED`).
+6. 4-part evidence chain construction & project registration.
+7. CrewAI EvidenceAgent tools (`get_evidence_tools()`).
+
+

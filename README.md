@@ -29,10 +29,11 @@ Modern job hunting exposes candidates to opaque AI screening algorithms and priv
 | **Explainable Match Scoring** | 7 weighted dimensions (Coverage, Depth, Relevance, Experience, Education, Keywords). | **Phase 2** (Done) |
 | **Project Semantic Relevance** | Local cosine similarity with `nomic-embed-text` correlating projects with target requirements. | **Phase 2** (Done) |
 | **Interactive Analysis UI** | Full Next.js 14 dashboard with 7 dimension cards, requirement filters, and local AI telemetry. | **Phase 2** (Done) |
-| **Code Evidence Scanning** | Scan local Git repositories and commit logs using GitPython to ground resume claims in real code. | **Phase 3** (Planned) |
-| **Zero-Hallucination Loop** | Iterative feedback loop between Resume Optimizer and Fact Checker to rewrite resumes. | **Phase 3** (Planned) |
-| **ATS Emulation & Scoring** | Emulate enterprise ATS parsers (Taleo, Greenhouse, Workday) for structure and keyword density. | **Phase 3** (Planned) |
-| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 3** (Planned) |
+| **Code Evidence Scanning** | Scan local Git repositories and commit logs using GitPython to ground resume claims in real code. | **Phase 3** (Done) |
+| **Evidence Grounding UI** | Project registry (`/projects`) and 4-part evidence chain contrast against baseline match score. | **Phase 3** (Done) |
+| **Zero-Hallucination Loop** | Iterative feedback loop between Resume Optimizer and Fact Checker to rewrite resumes. | **Phase 4** (Planned) |
+| **ATS Emulation & Scoring** | Emulate enterprise ATS parsers (Taleo, Greenhouse, Workday) for structure and keyword density. | **Phase 4** (Planned) |
+| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 4** (Planned) |
 
 ---
 
@@ -102,16 +103,16 @@ Modern job hunting exposes candidates to opaque AI screening algorithms and priv
 careercrew/
 ├── backend/
 │   ├── app/
-│   │   ├── agents/          # 9 specialized CrewAI agent specifications & orchestrator
-│   │   ├── api/             # FastAPI v1 endpoints (health, system, ingestion, agents, db)
+│   │   ├── agents/          # 9 specialized CrewAI agents & evidence inspection tools
+│   │   ├── api/             # FastAPI v1 endpoints (health, system, ingestion, projects, analysis)
 │   │   ├── core/            # Config (Pydantic Settings), logging & privacy filters
-│   │   ├── db/              # SQLAlchemy SQLite session, engine, and init_db
+│   │   ├── db/              # SQLAlchemy SQLite session, engine, migrations, and init_db
 │   │   ├── ingestion/       # PyMuPDF, python-docx, text parsers & security sanitizers
-│   │   ├── models/          # SQLAlchemy models (Resume, JobDescription, Project, Application, Run)
-│   │   ├── schemas/         # Pydantic validation schemas
-│   │   ├── services/        # Ollama LLM service, Embedding service, Chroma vector store
+│   │   ├── models/          # SQLAlchemy models (Resume, JobDescription, Project, EvidenceRecord, Run)
+│   │   ├── schemas/         # Pydantic validation schemas (Intelligence, Evidence, Projects)
+│   │   ├── services/        # Ollama LLM, Embeddings, Chroma, Git Scanner, Detectors, Evidence
 │   │   └── main.py          # FastAPI application entrypoint with lifespan events
-│   ├── tests/               # 28 automated tests covering health, db, ingestion, ollama
+│   ├── tests/               # 89 automated tests covering Phase 1, 2, and 3
 │   ├── pytest.ini           # Pytest asyncio configuration
 │   ├── requirements.txt     # Locked local-only dependencies
 │   ├── Dockerfile           # Optional backend container
@@ -174,7 +175,7 @@ python -m pip install -r requirements.txt
 ```bash
 python -m pytest tests -v
 ```
-*(All 28 tests pass against local in-memory SQLite, PyMuPDF, python-docx, and local Ollama)*
+*(All 89 tests pass across Phase 1, Phase 2, and Phase 3 against local in-memory SQLite, PyMuPDF, python-docx, Git fixtures, and local Ollama)*
 
 ### 3. Start Backend Server
 ```bash
@@ -221,8 +222,17 @@ Open **http://localhost:3000** in your browser.
   - [x] Next.js 14 Interactive Analysis Dashboard (`/analysis`) with 7 dimension cards & filters
   - [x] SQLite persistence for `AnalysisRun` with full result telemetry
   - [x] 62/62 automated tests passing + Zero cloud API dependency verification
-- [ ] **Phase 3: Multi-Agent Optimization & Evidence Verification**
-  - [ ] Implement Git commit & code pattern forensic scanner using GitPython
+- [x] **Phase 3: Evidence-Grounded Project Intelligence**
+  - [x] Local Git repository registration with strict path traversal & system boundary validation
+  - [x] Read-only Git scanner with Windows handle safety and sanitized remote URLs
+  - [x] Pluggable technology detectors (Python, JavaScript/TypeScript, Docker, Databases, Frontend, Java, AST/Source, Readme)
+  - [x] Strict anti-hallucination confidence hierarchy (`VERIFIED` $\ge 0.85$, `LIKELY` $\ge 0.65$, `WEAK` $\le 0.45$, `UNVERIFIED`)
+  - [x] 4-part evidence grounding chain (`Job Requirement -> Resume Claim -> Project -> EvidenceRecord`)
+  - [x] Deterministic CrewAI EvidenceAgent tool suite (`get_evidence_tools()`)
+  - [x] Projects Dashboard (`/projects`) and Match Analysis Evidence Grounding section
+  - [x] SQLite schema migrations for `projects` & `evidence_records` table persistence
+  - [x] 89/89 automated tests passing + Phase 3 automated verification
+- [ ] **Phase 4: Multi-Agent Optimization & Fact-Checking Loop**
   - [ ] Implement iterative Resume Optimizer <-> Fact Checker zero-hallucination loop
   - [ ] Implement ATS Validator emulation for major enterprise systems (Taleo, Greenhouse)
   - [ ] Implement Grounded Interview Preparation generator (STAR format + technical deep dives)

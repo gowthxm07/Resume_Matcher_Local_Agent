@@ -53,6 +53,18 @@ from app.schemas.intelligence import (
     AnalysisResult,
 )
 
+from app.schemas.evidence import (
+    ConfidenceLevel,
+    EvidenceType,
+    EvidenceItem,
+    ProjectRegisterRequest,
+    GitCommitSummary,
+    GitMetadata,
+    SkillVerificationResult,
+    EvidenceChainItem,
+    EvidenceAssessment,
+)
+
 __all__ = [
     "HealthResponse",
     "OllamaStatus",
@@ -95,4 +107,14 @@ __all__ = [
     "ProjectRelevanceItem",
     "AnalysisMetadata",
     "AnalysisResult",
+    "ConfidenceLevel",
+    "EvidenceType",
+    "EvidenceItem",
+    "ProjectRegisterRequest",
+    "GitCommitSummary",
+    "GitMetadata",
+    "SkillVerificationResult",
+    "EvidenceChainItem",
+    "EvidenceAssessment",
 ]
+

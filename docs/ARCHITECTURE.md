@@ -184,3 +184,64 @@ Every job requirement is classified into:
 - **`PARTIAL_MATCH`**: Related or adjacent experience without exact requirement satisfaction.
 - **`MISSING`**: True requirement gap requiring candidate skill development.
 
+---
+
+## 9. Phase 3: Evidence-Grounded Project Intelligence System
+
+Phase 3 introduces forensic project verification to determine whether technical skills and project claims asserted on a resume can be independently validated against the candidate's actual local software repositories.
+
+### 9.1 Filesystem Security Validator (`app.services.path_validator`)
+Security and isolation are non-negotiable when inspecting candidate repositories:
+- **Canonical Path Resolution**: Uses `os.path.realpath` to resolve symbolic links and directory traversal attempts (`../`, `~`).
+- **Strict Boundary Checks**: Enforces that registered paths must be existing, readable directories.
+- **Forbidden Directory Blacklist**: Prohibits scanning of filesystem roots (`C:\`, `/`), OS system paths (`C:\Windows`, `C:\Program Files`, `/etc`, `/usr`), user home root directories, and internal CareerCrew application directories (`./data`, `./data/database`, `./data/embeddings`).
+- **Path Traversal Defense**: Rejects null bytes, wildcard expansions, and shell metacharacters.
+
+### 9.2 Safe Git Repository Scanner (`app.services.git_scanner`)
+- **Read-Only Inspection**: Inspects Git repositories without executing build scripts, package managers (`npm install`, `pip install`), git hooks, or candidate binaries.
+- **Windows Handle Safety**: Always encapsulates GitPython `Repo` objects inside `try...finally: repo.close()` blocks to prevent persistent Windows file locking on `.git/objects` and index.
+- **Credential Stripping**: Automatically sanitizes remote URLs (e.g. `https://oauth2:token@github.com/...` -> `https://github.com/...`) before storing in SQLite.
+- **Git Metadata Extraction**: Extracts HEAD commit SHA, active branch name, total commit count, author commit history, and recent commit messages.
+- **Non-Git Directory Graceful Fallback**: Safely handles non-git folders by inspecting file trees without crashing.
+
+### 9.3 Modular Technology Detectors (`app.services.detectors`)
+A pluggable detector suite inspects registered project files across multiple technological tiers:
+1. **Package JSON Detector (`package_json_detector.py`)**: Parses `package.json` dependencies and `tsconfig.json` for JavaScript, TypeScript, React, Next.js, Express, Tailwind, Jest, etc.
+2. **Python Detector (`python_detector.py`)**: Parses `requirements.txt`, `pyproject.toml`, and `Pipfile` for Python, FastAPI, Django, Flask, SQLAlchemy, Pydantic, pytest, etc.
+3. **Container & Infrastructure Detector (`container_infra_detector.py`)**: Parses `Dockerfile`, `docker-compose.yml`, Kubernetes manifests, and Terraform scripts for Docker, PostgreSQL, Redis, Kubernetes, etc.
+4. **Database Detector (`database_detector.py`)**: Parses `schema.prisma`, `alembic.ini`, SQL migration files, and ORM configurations.
+5. **Frontend Detector (`frontend_detector.py`)**: Detects frontend toolchains, Tailwind configurations, Vite, Webpack, and CSS frameworks.
+6. **Java Detector (`java_detector.py`)**: Detects Maven (`pom.xml`) and Gradle build configurations.
+7. **Source Code Detector (`source_code_detector.py`)**: Strips comments and docstrings before AST/regex inspection; extracts active imports and usage signatures.
+8. **Documentation Detector (`documentation_detector.py`)**: Parses `README.md` and documentation files for mentions, with a strict confidence ceiling ($\le 0.45$, `WEAK`) to prevent spoofing via misleading text.
+
+### 9.4 Confidence Hierarchy & Evidence Scoring
+Evidence is classified into four deterministic confidence tiers:
+- **`VERIFIED` ($\ge 0.85$)**: Direct implementation in source code, active dependencies in manifests, or infrastructure configuration.
+- **`LIKELY` ($0.65 - 0.84$)**: Supporting configurations, test files, or dev dependencies without direct production source imports.
+- **`WEAK` ($0.30 - 0.64$)**: Documentation mentions (README), comments, or indirect build script references.
+- **`UNVERIFIED` ($< 0.30$)**: Claimed on resume but zero corroborating evidence found in registered projects.
+
+### 9.5 4-Part Grounding Evidence Chain
+Connects each job requirement directly to raw filesystem evidence:
+```
+Target Job Requirement
+        │
+        ▼
+Candidate Resume Claim
+        │
+        ▼
+Candidate Local Project
+        │
+        ▼
+EvidenceRecord (Source File, Line, Snippet, Confidence, Detector)
+```
+
+### 9.6 CrewAI Evidence Agent Tools (`app.agents.tools.evidence_tools`)
+Deterministic, local-only tools registered for the CrewAI `EvidenceAgent`:
+- `scan_git_repository_tool`: Scans a project repository and indexes all technology evidence.
+- `extract_commit_evidence_tool`: Analyzes commit messages and author frequency for technology keywords.
+- `find_skill_evidence_tool`: Retrieves all indexed evidence records matching a given canonical skill.
+- `verify_skill_tool`: Evaluates candidate claims against repository evidence and outputs `VERIFIED`, `LIKELY`, `WEAK`, or `UNVERIFIED`.
+
+

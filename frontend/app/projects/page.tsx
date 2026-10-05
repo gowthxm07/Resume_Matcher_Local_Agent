@@ -1,38 +1,548 @@
-import { GitBranch, Clock, Terminal } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  GitBranch,
+  FolderPlus,
+  RefreshCw,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+  FileCode,
+  Layers,
+  Database,
+  ExternalLink,
+  Code,
+  ShieldCheck,
+  AlertCircle,
+  HelpCircle,
+  Terminal,
+} from "lucide-react";
+import {
+  fetchProjects,
+  registerProject,
+  scanProject,
+  fetchProjectEvidence,
+  verifySkills,
+} from "@/lib/api";
+import { ProjectResponse, EvidenceItem, SkillVerificationResult, ConfidenceLevel } from "@/types";
 
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState<ProjectResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Registration modal state
+  const [showModal, setShowModal] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formPath, setFormPath] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  // Scanning state
+  const [scanningId, setScanningId] = useState<string | null>(null);
+
+  // Evidence view state
+  const [selectedProject, setSelectedProject] = useState<ProjectResponse | null>(null);
+  const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
+  const [loadingEvidence, setLoadingEvidence] = useState(false);
+  const [evidenceFilter, setEvidenceFilter] = useState<string>("ALL");
+
+  // Quick skill verification tester
+  const [skillInput, setSkillInput] = useState("");
+  const [verificationResult, setVerificationResult] = useState<SkillVerificationResult | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  async function loadProjects() {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchProjects();
+      setProjects(data);
+      if (data.length > 0 && !selectedProject) {
+        handleSelectProject(data[0]);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSelectProject(proj: ProjectResponse) {
+    setSelectedProject(proj);
+    try {
+      setLoadingEvidence(true);
+      const ev = await fetchProjectEvidence(proj.id);
+      setEvidenceList(ev);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingEvidence(false);
+    }
+  }
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formName.trim() || !formPath.trim()) {
+      setModalError("Please provide both repository name and absolute local path.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setModalError(null);
+      const created = await registerProject(formName.trim(), formPath.trim(), formDesc.trim());
+      setShowModal(false);
+      setFormName("");
+      setFormPath("");
+      setFormDesc("");
+      await loadProjects();
+      handleSelectProject(created);
+    } catch (err: any) {
+      setModalError(err.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleScan(projectId: string) {
+    try {
+      setScanningId(projectId);
+      const updated = await scanProject(projectId);
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? updated : p)));
+      if (selectedProject?.id === projectId) {
+        handleSelectProject(updated);
+      }
+    } catch (err: any) {
+      alert(`Scan failed: ${err.message}`);
+    } finally {
+      setScanningId(null);
+    }
+  }
+
+  async function handleQuickVerify(e: React.FormEvent) {
+    e.preventDefault();
+    if (!skillInput.trim()) return;
+
+    try {
+      setVerifying(true);
+      const results = await verifySkills([skillInput.trim()]);
+      if (results && results.length > 0) {
+        setVerificationResult(results[0]);
+      }
+    } catch (err: any) {
+      alert(`Skill verification failed: ${err.message}`);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  const filteredEvidence = evidenceList.filter((item) => {
+    if (evidenceFilter === "ALL") return true;
+    return item.confidence_level === evidenceFilter;
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-surface-border">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <GitBranch className="w-5 h-5 text-indigo-400" />
-            Project Evidence
+            Project Evidence & Repository Intelligence
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Local git tree scanner and codebase evidence indexer
+            Ground candidate resume claims in genuine local repositories, commits, and configurations
           </p>
         </div>
-        <div className="px-3 py-1 rounded-full bg-slate-800 text-slate-400 text-xs font-mono border border-slate-700">
-          Phase 2 Component
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition shadow-sm"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Register Repository
+          </button>
         </div>
       </div>
 
-      <div className="p-8 rounded-xl bg-surface border border-surface-border text-center max-w-xl mx-auto my-12">
-        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
-          <Terminal className="w-6 h-6" />
+      {/* Quick Skill Verification Bar */}
+      <div className="p-4 rounded-xl bg-surface border border-surface-border shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+                Instant Skill Grounding Verification
+              </h3>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Verify any technical skill against your registered repositories without executing arbitrary code
+            </p>
+          </div>
+          <form onSubmit={handleQuickVerify} className="flex items-center gap-2 max-w-md w-full">
+            <input
+              type="text"
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
+              placeholder="e.g. FastAPI, PostgreSQL, Docker, React"
+              className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="submit"
+              disabled={verifying || !skillInput.trim()}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-xs font-medium border border-slate-700 transition"
+            >
+              {verifying ? "Checking..." : "Verify Claim"}
+            </button>
+          </form>
         </div>
-        <h2 className="text-base font-semibold text-white mb-2">
-          Evidence Scanner Foundation Ready
-        </h2>
-        <p className="text-xs text-slate-400 leading-relaxed mb-6">
-          GitPython, SQLite model (<code className="text-indigo-300">projects</code>), and the local vector storage directories are initialized. In Phase 2, the Evidence Agent will inspect your local repositories and commit histories to ground every resume claim in tangible proof.
-        </p>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 font-mono">
-          <Clock className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Scheduled for Phase 2 Implementation</span>
-        </div>
+
+        {/* Verification Result Display */}
+        {verificationResult && (
+          <div className="mt-3 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-300 font-medium">{verificationResult.skill}</span>
+              <span className="text-slate-500 font-mono text-[11px]">({verificationResult.canonical_skill})</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  verificationResult.status === "VERIFIED"
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                    : verificationResult.status === "LIKELY"
+                    ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
+                    : verificationResult.status === "WEAK"
+                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                    : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                }`}
+              >
+                {verificationResult.status} ({Math.round(verificationResult.confidence * 100)}%)
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-400">
+              {verificationResult.summary}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Main Grid: Projects List & Evidence Details */}
+      {loading ? (
+        <div className="p-12 text-center text-slate-400 text-xs">
+          <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-indigo-400" />
+          Loading registered software repositories...
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="p-12 rounded-xl bg-surface border border-surface-border text-center max-w-lg mx-auto my-8">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
+            <FolderPlus className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-semibold text-white mb-2">No Local Repositories Registered</h2>
+          <p className="text-xs text-slate-400 leading-relaxed mb-6">
+            Register your local software projects (e.g. <code className="text-indigo-300">D:\Projects\MyApp</code>).
+            CareerCrew scans manifests, configurations, Dockerfiles, and commit histories to verify the skills listed on your resume.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition"
+          >
+            Register Your First Project
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Projects Column (5 cols) */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+              <span>REGISTERED REPOSITORIES ({projects.length})</span>
+            </div>
+
+            <div className="space-y-3">
+              {projects.map((proj) => {
+                const isSelected = selectedProject?.id === proj.id;
+                const isScanning = scanningId === proj.id;
+
+                return (
+                  <div
+                    key={proj.id}
+                    onClick={() => handleSelectProject(proj)}
+                    className={`p-4 rounded-xl border transition cursor-pointer ${
+                      isSelected
+                        ? "bg-slate-800/80 border-indigo-500/60 shadow-md ring-1 ring-indigo-500/30"
+                        : "bg-surface border-surface-border hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs font-semibold text-white truncate">{proj.name}</h3>
+                          {proj.git_branch && (
+                            <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-mono flex items-center gap-1">
+                              <GitBranch className="w-2.5 h-2.5 text-indigo-400" />
+                              {proj.git_branch}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-mono truncate mt-1">
+                          {proj.repo_path}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleScan(proj.id);
+                        }}
+                        disabled={isScanning}
+                        title="Re-scan repository for evidence"
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin text-indigo-400" : ""}`} />
+                      </button>
+                    </div>
+
+                    {/* Git Details */}
+                    <div className="mt-2.5 flex items-center gap-3 text-[10px] text-slate-400 font-mono">
+                      {proj.head_commit && (
+                        <span>commit {proj.head_commit.slice(0, 7)}</span>
+                      )}
+                      <span>{proj.commit_count || 0} commits</span>
+                      <span className="text-indigo-400 font-sans font-medium">
+                        {proj.evidence_count} evidence items
+                      </span>
+                    </div>
+
+                    {/* Detected Tech Badges */}
+                    {proj.detected_technologies && proj.detected_technologies.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {proj.detected_technologies.slice(0, 6).map((tech) => (
+                          <span
+                            key={tech}
+                            className="px-2 py-0.5 rounded-md bg-slate-900/90 border border-slate-800 text-[10px] text-slate-300"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                        {proj.detected_technologies.length > 6 && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-slate-900/90 text-[10px] text-slate-500">
+                            +{proj.detected_technologies.length - 6} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Evidence Explorer Column (7 cols) */}
+          <div className="lg:col-span-7">
+            {selectedProject ? (
+              <div className="p-5 rounded-xl bg-surface border border-surface-border space-y-4">
+                {/* Explorer Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-surface-border">
+                  <div>
+                    <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-400" />
+                      Evidence Artifacts: {selectedProject.name}
+                    </h2>
+                    <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                      {selectedProject.repo_path}
+                    </p>
+                  </div>
+
+                  {/* Filter Tabs */}
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-[10px]">
+                    {["ALL", "VERIFIED", "LIKELY", "WEAK"].map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setEvidenceFilter(lvl)}
+                        className={`px-2 py-0.5 rounded font-medium transition ${
+                          evidenceFilter === lvl
+                            ? "bg-indigo-600 text-white"
+                            : "text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Evidence Item List */}
+                {loadingEvidence ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-indigo-400" />
+                    Loading repository evidence records...
+                  </div>
+                ) : filteredEvidence.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    No evidence records matching current filter.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+                    {filteredEvidence.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-2 text-xs"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">{item.technology}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              ({item.canonical_skill})
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded bg-slate-800 text-[10px] text-slate-400 font-mono">
+                              {item.evidence_type}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              item.confidence_level === "VERIFIED"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                                : item.confidence_level === "LIKELY"
+                                ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
+                                : item.confidence_level === "WEAK"
+                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                            }`}
+                          >
+                            {item.confidence_level} ({Math.round(item.confidence * 100)}%)
+                          </span>
+                        </div>
+
+                        {/* File Location */}
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                          <FileCode className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                          <span className="text-slate-300">{item.source_file}</span>
+                          {item.source_location && (
+                            <span className="text-slate-500">:{item.source_location}</span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          {item.description}
+                        </p>
+
+                        {/* Snippet preview */}
+                        {item.snippet && (
+                          <pre className="p-2 rounded bg-slate-950 border border-slate-900 text-[10px] font-mono text-slate-300 overflow-x-auto">
+                            <code>{item.snippet}</code>
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-8 rounded-xl bg-surface border border-surface-border text-center text-slate-400 text-xs">
+                Select a project on the left to inspect evidence artifacts.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Register Project Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl bg-surface border border-surface-border p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FolderPlus className="w-4 h-4 text-indigo-400" />
+                Register Local Repository
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-white text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Provide an absolute path to a local Git software repository on your system.
+              CareerCrew runs read-only inspections with zero cloud APIs.
+            </p>
+
+            {modalError && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRegister} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. AI Customer Support Bot"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Local Filesystem Absolute Path
+                </label>
+                <input
+                  type="text"
+                  value={formPath}
+                  onChange={(e) => setFormPath(e.target.value)}
+                  placeholder="e.g. D:\Projects\ai-support-bot or /home/alex/projects/app"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 font-mono text-[11px] focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Must be an existing local folder. System and root directories are strictly blocked.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
+                  placeholder="Brief note on repository purpose..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition disabled:opacity-50"
+                >
+                  {submitting ? "Validating & Scanning..." : "Register & Scan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
