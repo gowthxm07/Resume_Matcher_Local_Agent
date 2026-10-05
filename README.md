@@ -24,11 +24,15 @@ Modern job hunting exposes candidates to opaque AI screening algorithms and priv
 | **Local Ingestion** | Robust extraction of resumes & JDs from PDF (PyMuPDF), DOCX (python-docx), TXT, and Markdown. | **Phase 1** (Done) |
 | **System Telemetry** | Real-time status inspection of local Ollama, Llama 3.2:3b, SQLite, and ChromaDB. | **Phase 1** (Done) |
 | **Multi-Agent Orchestration** | Architectural specification and integration blueprint for 9 specialized CrewAI agents. | **Phase 1** (Done) |
-| **JD & Resume Analysis** | Deconstruct job requirements into hard/soft skills and parse candidate achievements into atomic claims. | **Phase 2** (Planned) |
-| **Code Evidence Scanning** | Scan local Git repositories and commit logs using GitPython to ground resume claims in real code. | **Phase 2** (Planned) |
-| **Zero-Hallucination Loop** | Iterative feedback loop between Resume Optimizer and Fact Checker to ensure zero fabricated claims. | **Phase 2** (Planned) |
-| **ATS Emulation & Scoring** | Emulate enterprise ATS parsers (Taleo, Greenhouse, Workday) for structure and keyword density. | **Phase 2** (Planned) |
-| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 2** (Planned) |
+| **Structured Intelligence** | Deconstruct resumes and JDs into validated Pydantic profiles using local Llama 3.2:3b. | **Phase 2** (Done) |
+| **Skill Normalization** | Canonical catalog mapping aliases with strict negative boundaries (Java != JS, C != C++ != C#). | **Phase 2** (Done) |
+| **Explainable Match Scoring** | 7 weighted dimensions (Coverage, Depth, Relevance, Experience, Education, Keywords). | **Phase 2** (Done) |
+| **Project Semantic Relevance** | Local cosine similarity with `nomic-embed-text` correlating projects with target requirements. | **Phase 2** (Done) |
+| **Interactive Analysis UI** | Full Next.js 14 dashboard with 7 dimension cards, requirement filters, and local AI telemetry. | **Phase 2** (Done) |
+| **Code Evidence Scanning** | Scan local Git repositories and commit logs using GitPython to ground resume claims in real code. | **Phase 3** (Planned) |
+| **Zero-Hallucination Loop** | Iterative feedback loop between Resume Optimizer and Fact Checker to rewrite resumes. | **Phase 3** (Planned) |
+| **ATS Emulation & Scoring** | Emulate enterprise ATS parsers (Taleo, Greenhouse, Workday) for structure and keyword density. | **Phase 3** (Planned) |
+| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 3** (Planned) |
 
 ---
 
@@ -206,17 +210,23 @@ Open **http://localhost:3000** in your browser.
   - [x] CrewAI 9-agent architecture blueprint & pipeline specifications
   - [x] Next.js 14 developer productivity dashboard with real-time hardware telemetry
   - [x] 28/28 automated tests passing
-- [ ] **Phase 2: Agent Implementation & Intelligence Pipeline**
-  - [ ] Implement JD Analyzer & Resume Analyzer CrewAI agents
-  - [ ] Implement Git evidence scanner with GitPython & local vector index
-  - [ ] Implement Match Analyzer scoring engine
+- [x] **Phase 2: Document Intelligence & Explainable Match Engine**
+  - [x] Resume Profile structured extraction with Pydantic v2 schemas (`ResumeProfile`)
+  - [x] Job Description structured extraction with required/preferred distinction (`JobProfile`)
+  - [x] Deterministic Skill Normalizer with strict negative boundaries (`Java != JS`, `C != C++ != C#`)
+  - [x] Requirement Classifier with categorization, importance weights, and experience parsing
+  - [x] Semantic Project Relevance engine powered by local `nomic-embed-text` embeddings
+  - [x] Explainable Matching Engine with 7 weighted dimensions strictly bounded `[0.0 - 100.0]`
+  - [x] Synthetic Evaluation Dataset with monotonic candidate ranking (Alice > Bob > Charlie)
+  - [x] Next.js 14 Interactive Analysis Dashboard (`/analysis`) with 7 dimension cards & filters
+  - [x] SQLite persistence for `AnalysisRun` with full result telemetry
+  - [x] 62/62 automated tests passing + Zero cloud API dependency verification
+- [ ] **Phase 3: Multi-Agent Optimization & Evidence Verification**
+  - [ ] Implement Git commit & code pattern forensic scanner using GitPython
   - [ ] Implement iterative Resume Optimizer <-> Fact Checker zero-hallucination loop
-  - [ ] Implement ATS Validator and Interview Prep Generator
-  - [ ] Connect interactive Next.js application workflow screens
-- [ ] **Phase 3: Portfolio Polish, Packaging & Benchmarking**
-  - [ ] End-to-end benchmark suite comparing baseline vs. optimized match scores
-  - [ ] Export tailored resumes to PDF and DOCX
-  - [ ] Offline installers and standalone desktop packaging
+  - [ ] Implement ATS Validator emulation for major enterprise systems (Taleo, Greenhouse)
+  - [ ] Implement Grounded Interview Preparation generator (STAR format + technical deep dives)
+  - [ ] Export optimized resumes to PDF and DOCX formats
 
 ---
 

@@ -74,3 +74,76 @@ export interface DatabaseSummary {
     analysis_runs: number;
   };
 }
+
+export interface RequirementMatchResult {
+  canonical_skill: string;
+  original_text: string;
+  requirement_type: "required" | "preferred";
+  classification?: "match" | "partial_match" | "missing";
+  status?: "match" | "partial_match" | "missing";
+  confidence: number;
+  candidate_evidence?: string[];
+  evidence?: string;
+  explanation: string;
+  extracted_source?: string;
+}
+
+export interface DimensionScores {
+  overall_score?: number;
+  required_skill_score: number;
+  preferred_skill_score: number;
+  technical_depth_score: number;
+  project_relevance_score: number;
+  experience_alignment_score?: number;
+  education_alignment_score?: number;
+  keyword_coverage_score?: number;
+  experience_score?: number;
+  education_score?: number;
+  keyword_score?: number;
+  weights?: Record<string, number>;
+}
+
+export interface ProjectRelevanceItem {
+  project_name: string;
+  technologies?: string[];
+  similarity_score: number;
+  matched_themes?: string[];
+  matched_skills?: string[];
+  overlap_summary?: string;
+}
+
+export interface AnalysisMetadata {
+  llm_provider?: string;
+  model?: string;
+  model_name?: string;
+  embedding_model: string;
+  raw_text_hashes?: Record<string, string>;
+  extraction_time_ms: number;
+  matching_time_ms?: number;
+  analysis_time_ms?: number;
+  inference_time_ms: number;
+  total_time_ms: number;
+  timestamp: string;
+}
+
+export interface AnalysisResult {
+  overall_score: number;
+  match_classification?: "Strong Match" | "Moderate Match" | "Poor Match";
+  summary?: string;
+  summary_explanation?: string;
+  dimension_scores: DimensionScores;
+  scoring_weights?: Record<string, number>;
+  requirements_analysis: RequirementMatchResult[];
+  matched_requirements: RequirementMatchResult[];
+  partial_matches?: RequirementMatchResult[];
+  partial_requirements?: RequirementMatchResult[];
+  missing_requirements: RequirementMatchResult[];
+  strong_areas?: string[];
+  weak_areas?: string[];
+  project_relevance: ProjectRelevanceItem[];
+  metadata: AnalysisMetadata;
+  analysis_run_id?: string;
+  resume_id?: string;
+  job_description_id?: string;
+}
+

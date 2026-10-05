@@ -134,3 +134,53 @@ Schema defined with SQLAlchemy 2.0 in `app.models`:
 - **Text & Markdown Extraction**: TextExtractor handles `.txt` and `.md` with multi-encoding fallback (`utf-8`, `utf-8-sig`, `latin-1`).
 - **Path Sanitization**: `sanitize_filename` strips path traversal (`../../`), null bytes (`\x00`), and unsafe shell characters.
 - **Size Enforcement**: Configurable `UPLOAD_MAX_BYTES` (default 10MB) prevents resource exhaustion.
+
+---
+
+## 8. Phase 2: Document Intelligence & Explainable Match Engine
+
+Phase 2 introduces the intelligence layer that transforms unstructured resume and job description documents into structured schemas and computes transparent, multidimensional match scores with zero hallucinations.
+
+### 8.1 Structured Profile Extractor (`app.services.extractor_service`)
+- **LLM-Powered Extraction**: Queries local Ollama (`llama3.2:3b`) with structured JSON schemas and strict anti-hallucination prompts.
+- **Resilient JSON Recovery**: Handles markdown code fences (` ```json `), outermost brace peeling, and trailing comma repair without throwing parse exceptions.
+- **Deterministic Regex Fallback**: If Ollama is offline or generates invalid JSON, fallback parsers extract contacts, catalog skills, experience, and projects using deterministic heuristics.
+- **SHA-256 Content Hash Caching**: Caches parsed `ResumeProfile` and `JobProfile` in memory keyed by text hash, eliminating redundant local LLM calls.
+
+### 8.2 Canonical Skill Normalizer (`app.services.skill_normalizer`)
+- **Canonical Skill Taxonomy**: Maps thousands of tech skill aliases to standard canonical IDs (e.g., `JS` -> `JavaScript`, `Postgres` -> `PostgreSQL`, `k8s` -> `Kubernetes`).
+- **Strict Negative Boundaries**: Enforces negative boundaries to prevent false equivalences:
+  - `Java` != `JavaScript`
+  - `C` != `C++` != `C#`
+  - `TypeScript` != `JavaScript`
+- **Categorization**: Groups normalized skills into `PROGRAMMING_LANGUAGE`, `FRAMEWORK`, `DATABASE`, `CLOUD`, `DEVOPS`, `TOOL`, `ARCHITECTURE`, `TESTING`, `SOFT_SKILL`, `EDUCATION`, and `EXPERIENCE`.
+
+### 8.3 Requirement Classifier (`app.services.requirement_classifier`)
+- **Categorization**: Distinguishes `REQUIRED` (mandatory) vs `PREFERRED` (nice-to-have) requirements using keyword heuristics.
+- **Experience Requirement Extraction**: Regex parsing extracts minimum required years of experience (e.g. "5+ years" -> `5.0`).
+- **Importance Weighting**: Assigns `critical`, `high`, `medium`, or `low` based on phrasing intensity and category.
+
+### 8.4 Semantic Project Relevance (`app.services.project_relevance`)
+- **Local Dense Embeddings**: Computes cosine similarity between candidate project descriptions and job description responsibilities using Ollama `nomic-embed-text`.
+- **Lexical Overlap Fallback**: Jaccard similarity fallback if embedding generation fails.
+- **Matched Technology Attribution**: Highlights specific candidate technologies utilized in projects that overlap with target job requirements.
+
+### 8.5 Explainable Matching Engine (`app.services.matching_engine`)
+Computes an explainable composite match score strictly bounded between `[0.0, 100.0]`:
+
+$$\text{Overall Score} = \sum_{i=1}^{7} w_i \times S_i$$
+
+Where weights $w_i$ sum to $1.0$ (100%):
+1. **Required Skill Coverage (35%)**: Direct coverage of mandatory skills ($1.0$ for MATCH, $0.5$ for PARTIAL).
+2. **Preferred Skill Coverage (15%)**: Coverage of bonus and preferred qualifications.
+3. **Technical Depth (15%)**: Verified usage of skills in work experience and projects vs mere keyword listing.
+4. **Project Semantic Relevance (15%)**: Alignment between candidate project accomplishments and target role responsibilities.
+5. **Experience Alignment (10%)**: Total verified experience vs required minimum years.
+6. **Education Alignment (5%)**: Degree and field of study alignment.
+7. **Keyword Coverage (5%)**: Overlap across general technical domain terms.
+
+Every job requirement is classified into:
+- **`MATCH`**: Clear candidate competency with grounded evidence.
+- **`PARTIAL_MATCH`**: Related or adjacent experience without exact requirement satisfaction.
+- **`MISSING`**: True requirement gap requiring candidate skill development.
+

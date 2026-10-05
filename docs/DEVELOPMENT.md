@@ -166,3 +166,38 @@ If you prefer to run within Docker:
 docker-compose up --build
 ```
 *Note: Docker is completely optional. Direct execution on your host OS is supported and recommended for local GPU acceleration.*
+
+---
+
+## 8. Phase 2 Verification & Match Testing
+
+### Automated Phase 2 Verification
+Run the complete Phase 2 verification script:
+```bash
+python scripts/verify_phase2.py
+```
+This script tests:
+1. Local Ollama & zero cloud API constraint.
+2. Skill normalizer & strict negative boundaries.
+3. Requirement classifier & experience parsing.
+4. Extractor service hashing & deterministic fallback.
+5. Project semantic relevance (cosine similarity & lexical overlap).
+6. Explainable matching engine (7 dimensions, sum of weights = 1.0).
+7. Synthetic evaluation dataset ranking consistency (Alice > Bob > Charlie).
+8. SQLite persistence of `AnalysisRun`.
+
+### Running All Unit & Integration Tests
+```bash
+cd backend
+python -m pytest tests -v
+```
+All 62 tests across Phase 1 and Phase 2 will execute and pass.
+
+### Interactive Analysis API Testing
+Execute a match analysis directly via `curl` or PowerShell:
+```bash
+curl -X POST http://127.0.0.1:8000/api/analysis/match \
+  -F "resume_text=Senior Python Engineer with 5+ years experience in FastAPI and PostgreSQL." \
+  -F "jd_text=Looking for a Senior Python Developer with FastAPI and PostgreSQL experience."
+```
+

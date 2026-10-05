@@ -34,6 +34,25 @@ from app.schemas.entities import (
     AnalysisRunResponse,
 )
 
+from app.schemas.intelligence import (
+    MatchClassification,
+    RequirementType,
+    SkillCategory,
+    ContactMetadata,
+    SkillsInventory,
+    EducationItem,
+    WorkExperienceItem,
+    ProjectItem,
+    ResumeProfile,
+    CategorizedRequirement,
+    JobProfile,
+    RequirementMatchResult,
+    DimensionScores,
+    ProjectRelevanceItem,
+    AnalysisMetadata,
+    AnalysisResult,
+)
+
 __all__ = [
     "HealthResponse",
     "OllamaStatus",
@@ -60,4 +79,20 @@ __all__ = [
     "AnalysisRunBase",
     "AnalysisRunCreate",
     "AnalysisRunResponse",
+    "MatchClassification",
+    "RequirementType",
+    "SkillCategory",
+    "ContactMetadata",
+    "SkillsInventory",
+    "EducationItem",
+    "WorkExperienceItem",
+    "ProjectItem",
+    "ResumeProfile",
+    "CategorizedRequirement",
+    "JobProfile",
+    "RequirementMatchResult",
+    "DimensionScores",
+    "ProjectRelevanceItem",
+    "AnalysisMetadata",
+    "AnalysisResult",
 ]
