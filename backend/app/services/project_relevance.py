@@ -138,6 +138,60 @@ class ProjectRelevanceService:
 
         return bounded_score, items
 
+    @classmethod
+    def evaluate_projects_sync(
+        cls,
+        resume: ResumeProfile,
+        job: JobProfile,
+    ) -> Tuple[float, List[ProjectRelevanceItem]]:
+        """
+        Synchronous project relevance evaluation using lexical overlap and tech matching.
+        """
+        projects: List[ProjectItem] = resume.projects
+        if not projects:
+            return 30.0, []
+
+        jd_targets = []
+        if job.responsibilities:
+            jd_targets.extend(job.responsibilities)
+        if job.required_skills:
+            jd_targets.append(f"Required skills: {', '.join(job.required_skills)}")
+        if job.preferred_skills:
+            jd_targets.append(f"Preferred skills: {', '.join(job.preferred_skills)}")
+        if job.domain_knowledge:
+            jd_targets.append(f"Domain: {', '.join(job.domain_knowledge)}")
+
+        combined_jd_text = " ".join(jd_targets) if jd_targets else f"{job.title} at {job.company}"
+
+        items: List[ProjectRelevanceItem] = []
+        project_scores: List[float] = []
+
+        for proj in projects:
+            proj_text = f"{proj.name}. {proj.description}. Technologies: {', '.join(proj.technologies)}"
+            lex_sim = lexical_jaccard_similarity(proj_text, combined_jd_text)
+            proj_tech_canon = {t.lower() for t in proj.technologies}
+            jd_req_canon = {s.lower() for s in job.required_skills + job.preferred_skills}
+            tech_overlap = len(proj_tech_canon.intersection(jd_req_canon)) / max(1, len(jd_req_canon))
+            sim_score = min(100.0, (lex_sim * 40.0) + (tech_overlap * 60.0))
+
+            matched_tech = [t for t in proj.technologies if any(t.lower() == req.lower() for req in job.required_skills + job.preferred_skills)]
+
+            items.append(ProjectRelevanceItem(
+                project_name=proj.name,
+                similarity_score=round(sim_score, 1),
+                matched_themes=matched_tech,
+            ))
+            project_scores.append(sim_score)
+
+        if not project_scores:
+            return 30.0, []
+
+        sorted_scores = sorted(project_scores, reverse=True)
+        top_score = sorted_scores[0]
+        avg_score = sum(sorted_scores) / len(sorted_scores)
+        composite_score = (top_score * 0.7) + (avg_score * 0.3)
+        return round(max(0.0, min(100.0, composite_score)), 1), items
+
 
 # Global singleton
 project_relevance_service = ProjectRelevanceService()

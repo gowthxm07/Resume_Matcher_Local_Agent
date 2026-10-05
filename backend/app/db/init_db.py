@@ -18,11 +18,12 @@ def init_db(target_engine=None) -> None:
     logger.info("Initializing SQLite database tables...")
     Base.metadata.create_all(bind=eng)
 
-    # Lightweight SQLite column migration for Phase 3 Project columns
+    # Lightweight SQLite column migration for Phase 3 Project columns and Phase 4 AnalysisRun columns
     try:
         with eng.connect() as conn:
             inspector = inspect(eng)
-            if "projects" in inspector.get_table_names():
+            table_names = inspector.get_table_names()
+            if "projects" in table_names:
                 columns = {c["name"] for c in inspector.get_columns("projects")}
                 if "git_remote" not in columns:
                     conn.execute(text("ALTER TABLE projects ADD COLUMN git_remote VARCHAR(512)"))
@@ -34,7 +35,13 @@ def init_db(target_engine=None) -> None:
                     conn.execute(text("ALTER TABLE projects ADD COLUMN commit_count INTEGER DEFAULT 0"))
                 if "last_scanned_at" not in columns:
                     conn.execute(text("ALTER TABLE projects ADD COLUMN last_scanned_at DATETIME"))
-                conn.commit()
+            if "analysis_runs" in table_names:
+                ar_columns = {c["name"] for c in inspector.get_columns("analysis_runs")}
+                if "execution_mode" not in ar_columns:
+                    conn.execute(text("ALTER TABLE analysis_runs ADD COLUMN execution_mode VARCHAR(50)"))
+                if "evidence_confidence" not in ar_columns:
+                    conn.execute(text("ALTER TABLE analysis_runs ADD COLUMN evidence_confidence FLOAT"))
+            conn.commit()
     except Exception as exc:
         logger.warning(f"Note during SQLite table migration: {exc}")
 

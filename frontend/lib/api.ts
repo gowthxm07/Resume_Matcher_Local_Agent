@@ -6,6 +6,8 @@ import {
   EvidenceItem,
   SkillVerificationResult,
   EvidenceAssessment,
+  FinalAnalysisDossier,
+  BenchmarkComparisonResult,
 } from "@/types";
 
 
@@ -175,4 +177,52 @@ export async function fetchAnalysisEvidence(analysisId: string): Promise<Evidenc
   if (!res.ok) throw new Error(`Failed to fetch analysis evidence: HTTP ${res.status}`);
   return res.json();
 }
+
+export async function runCrewAnalysis(payload: {
+  resume_id?: string;
+  job_description_id?: string;
+  project_ids?: string[];
+  raw_resume_text?: string;
+  raw_jd_text?: string;
+  use_live_llm?: boolean;
+}): Promise<FinalAnalysisDossier> {
+  const res = await fetch(`${API_BASE}/analysis/crew`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `Crew analysis failed: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchAnalysisDossier(analysisId: string): Promise<FinalAnalysisDossier> {
+  const res = await fetch(`${API_BASE}/analysis/${analysisId}/dossier`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch analysis dossier: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function runBenchmarkAnalysis(payload: {
+  resume_id?: string;
+  job_description_id?: string;
+  project_ids?: string[];
+  raw_resume_text?: string;
+  raw_jd_text?: string;
+}): Promise<BenchmarkComparisonResult> {
+  const res = await fetch(`${API_BASE}/analysis/benchmark`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `Benchmark failed: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 

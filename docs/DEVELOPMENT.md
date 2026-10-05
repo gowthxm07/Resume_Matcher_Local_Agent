@@ -231,29 +231,83 @@ curl -X POST http://127.0.0.1:8000/api/projects/verify-skills \
   -d '{"skills": ["FastAPI", "PostgreSQL", "Docker", "Kubernetes"]}'
 ```
 
-### 9.3 Running All Unit & Integration Tests (89 Tests)
-Run the entire backend test suite across Phase 1, Phase 2, and Phase 3:
+### 9.3 Running All Unit & Integration Tests (124 Tests)
+Run the entire backend test suite across all completed phases:
 ```bash
 cd backend
 python -m pytest tests -v
 ```
-All 89 tests pass:
+All 124 tests pass:
 - **Phase 1**: Health, Ingestion, Database, Ollama Service, Agent Blueprint (28 tests)
 - **Phase 2**: Intelligence Schemas, Skill Normalizer, Requirement Classifier, Extractor, Project Relevance, Matching Engine, Evaluation Dataset (34 tests)
 - **Phase 3**: Path Validator, Safe Git Scanner, Technology Detectors, Evidence Service, Projects API (27 tests)
+- **Phase 4**: Agent Tool Permissions, Agent Schemas & Dossier, Crew Execution Service, Crew API Endpoints, Monotonic Synthetic Ranking (35 tests)
 
 ### 9.4 Automated Phase 3 Verification
 Execute the automated Phase 3 verification script:
 ```bash
 python scripts/verify_phase3.py
 ```
-This script verifies:
-1. Local Ollama & zero cloud API constraint.
-2. Path security validator (blocks root, system dirs, data dirs, path traversal).
-3. Safe Git scanner (metadata, sanitized remotes, non-git fallback).
-4. Modular technology detectors (Python, Package.json, Docker/Compose, Source code, Readme).
-5. Evidence service & confidence hierarchy (`VERIFIED` $\ge 0.85$, `LIKELY` $\ge 0.65$, `WEAK` $\le 0.45$, `UNVERIFIED`).
-6. 4-part evidence chain construction & project registration.
-7. CrewAI EvidenceAgent tools (`get_evidence_tools()`).
+
+---
+
+## 10. Phase 4: Multi-Agent Orchestration & Benchmarking
+
+### 10.1 Running CrewAI Multi-Agent Analysis via API
+Execute end-to-end multi-agent orchestration:
+```bash
+curl -X POST http://127.0.0.1:8000/api/analysis/crew \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_resume_text": "Alex Chen, Senior Software Engineer with Python, FastAPI, Docker, and PostgreSQL experience.",
+    "raw_jd_text": "Senior Python Engineer requiring 5+ years experience with FastAPI, PostgreSQL, and Docker.",
+    "project_ids": [],
+    "use_live_llm": false
+  }'
+```
+
+### 10.2 Comparative Benchmark Mode
+Contrasts deterministic baseline vs multi-agent execution on identical inputs:
+```bash
+curl -X POST http://127.0.0.1:8000/api/analysis/benchmark \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_resume_text": "Alex Chen, Senior Software Engineer with Python and FastAPI.",
+    "raw_jd_text": "Senior Python Engineer requiring FastAPI and PostgreSQL.",
+    "project_ids": []
+  }'
+```
+
+### 10.3 Retrieving Stored Analysis Dossiers
+Retrieve an audit-traceable dossier by ID:
+```bash
+curl http://127.0.0.1:8000/api/analysis/{analysis_id}/dossier
+```
+
+### 10.4 Automated Phase 4 Verification Suite
+Execute the Phase 4 verification script covering all 10 criteria:
+```bash
+python scripts/verify_phase4.py
+```
+This script audits:
+1. Local model (`llama3.2:3b`) and embedding (`nomic-embed-text`) configuration.
+2. 9-agent architecture (5 active Phase 4 agents, 4 strictly deferred Phase 5 agents).
+3. Strict role-based tool permissions (least-privilege runtime access control).
+4. CrewAI agent creation and local Ollama endpoint binding.
+5. Structured Pydantic schemas and markdown/trailing comma JSON recovery.
+6. Deterministic application tools execution.
+7. Agent execution telemetry and duration recording.
+8. Evidence grounding and zero hallucination with 0 registered projects.
+9. Baseline vs multi-agent comparative benchmark execution.
+10. Privacy constraints and zero cloud API keys/endpoints audit.
+
+### 10.5 Frontend Validation
+Run typecheck and production build:
+```bash
+cd frontend
+npm run typecheck
+npm run build
+```
+
 
 

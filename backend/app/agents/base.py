@@ -71,12 +71,15 @@ class BaseCareerAgent(ABC):
         """Return agent configuration and status information."""
         return self.metadata.model_dump()
 
-    def create_crewai_agent(self, verbose: bool = False):
+    def get_tools(self) -> List[Any]:
+        """Return list of permitted tools for this agent."""
+        return []
+
+    def create_crewai_agent(self, llm=None, verbose: bool = False):
         """
         Factory to instantiate the underlying CrewAI Agent instance.
-        In Phase 1, raises NotImplementedError indicating implementation belongs to Phase 2.
+        Raises NotImplementedError if agent is inactive in the current phase.
         """
         raise NotImplementedError(
-            f"{self.metadata.name} is a planned Phase 2 component. "
-            "Real agent orchestration begins in Phase 2."
+            f"{self.metadata.name} is not active in the current analysis phase."
         )

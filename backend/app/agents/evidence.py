@@ -1,13 +1,26 @@
+"""
+Evidence Agent implementation for CareerCrew.
+Inspects candidate's local git repositories, commit logs, code structures, and manifests
+to extract tangible, verifiable proof for claimed competencies without executing arbitrary code.
+"""
+
 from typing import List, Any
 from app.agents.base import BaseCareerAgent, AgentMetadata, AgentRole
 from app.agents.tools.evidence_tools import get_evidence_tools
+from app.agents.llm_config import get_crewai_llm
+
+try:
+    from crewai import Agent
+except ImportError:
+    Agent = None
 
 
 class EvidenceAgent(BaseCareerAgent):
     """
-    Evidence Agent (Phase 3 Component).
+    Evidence Agent.
     Inspects candidate's local git repositories, commit logs, code structures, and manifests
     to extract tangible, verifiable proof for claimed competencies without executing arbitrary code.
+    Distinguishes VERIFIED, LIKELY, WEAK, UNVERIFIED, and UNAVAILABLE.
     """
 
     def __init__(self):
@@ -27,7 +40,20 @@ class EvidenceAgent(BaseCareerAgent):
         )
 
     def get_tools(self) -> List[Any]:
-        """Return deterministic tools assigned to this agent."""
+        """Return deterministic evidence inspection tools assigned to this agent."""
         return get_evidence_tools()
 
-
+    def create_crewai_agent(self, llm=None, verbose: bool = False):
+        """Instantiate underlying CrewAI Agent instance configured with local Ollama."""
+        agent_llm = llm or get_crewai_llm()
+        if Agent is None:
+            raise RuntimeError("CrewAI Agent class is not installed.")
+        return Agent(
+            role=self.role,
+            goal=self.goal,
+            backstory=self.backstory,
+            tools=self.get_tools(),
+            llm=agent_llm,
+            verbose=verbose,
+            allow_delegation=False,
+        )

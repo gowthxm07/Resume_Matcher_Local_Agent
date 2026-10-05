@@ -545,6 +545,24 @@ class EvidenceService:
             scanned_projects_count=projects_count,
         )
 
+    @classmethod
+    def compute_evidence_confidence_score(
+        cls,
+        verified_count: int = 0,
+        likely_count: int = 0,
+        weak_count: int = 0,
+        total_skills: int = 0,
+    ) -> float:
+        """Compute empirical evidence confidence score percentage from category counts."""
+        if total_skills <= 0:
+            return 0.0
+        evidence_points = (
+            (verified_count * 1.0)
+            + (likely_count * 0.7)
+            + (weak_count * 0.3)
+        )
+        return round(min(100.0, (evidence_points / total_skills) * 100.0), 1)
+
     # ---------------------------------------------------------
     # MAPPERS
     # ---------------------------------------------------------

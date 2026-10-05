@@ -593,6 +593,24 @@ JSON Schema:
             extraction_metadata={"method": "deterministic_fallback"},
         )
 
+    def extract_resume_profile(self, raw_text: str, force_refresh: bool = False) -> ResumeProfile:
+        """Synchronously extract structured ResumeProfile using deterministic parser with caching."""
+        text_hash = compute_sha256(raw_text)
+        if not force_refresh and text_hash in self._resume_cache:
+            return self._resume_cache[text_hash]
+        profile = self._extract_resume_deterministic(raw_text, text_hash)
+        self._resume_cache[text_hash] = profile
+        return profile
+
+    def extract_job_profile(self, raw_text: str, force_refresh: bool = False) -> JobProfile:
+        """Synchronously extract structured JobProfile using deterministic parser with caching."""
+        text_hash = compute_sha256(raw_text)
+        if not force_refresh and text_hash in self._jd_cache:
+            return self._jd_cache[text_hash]
+        profile = self._extract_jd_deterministic(raw_text, text_hash)
+        self._jd_cache[text_hash] = profile
+        return profile
+
 
 # Global singleton instance
 extractor_service = ExtractorService()

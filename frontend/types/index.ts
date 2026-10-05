@@ -219,4 +219,67 @@ export interface EvidenceAssessment {
   timestamp: string;
 }
 
+export interface AgentExecutionTelemetry {
+  agent_name: string;
+  task_name: string;
+  start_time: string;
+  end_time: string;
+  duration_ms: number;
+  llm_invocations: number;
+  tool_invocations: number;
+  status: string;
+  error?: string | null;
+}
+
+export interface AgentExecutionSummary {
+  total_duration_ms: number;
+  total_llm_invocations: number;
+  total_tool_invocations: number;
+  execution_mode: string;
+  agents_active: string[];
+  agents_inactive: string[];
+  telemetry: AgentExecutionTelemetry[];
+}
+
+export interface FinalAnalysisDossier {
+  analysis_id: string;
+  resume_id: string;
+  job_description_id: string;
+  overall_match_score: number;
+  evidence_confidence_score: number;
+  classification: "STRONG_FIT" | "POTENTIAL_FIT" | "WEAK_FIT" | "NOT_RECOMMENDED" | string;
+  dimension_scores: Record<string, number>;
+  critical_requirements: string[];
+  strong_matches: string[];
+  partial_matches: string[];
+  missing_requirements: string[];
+  verified_skills: string[];
+  unverified_skills: string[];
+  project_evidence: Record<string, any>[];
+  key_strengths: string[];
+  key_gaps: string[];
+  agent_execution_summary?: AgentExecutionSummary;
+  timing_information?: Record<string, number>;
+  created_at: string;
+}
+
+export interface BenchmarkComparisonResult {
+  resume_id: string;
+  job_description_id: string;
+  baseline_match_score: number;
+  crew_match_score: number;
+  evidence_confidence_score: number;
+  baseline_execution_ms: number;
+  crew_execution_ms: number;
+  baseline_llm_calls: number;
+  crew_llm_calls: number;
+  baseline_tool_calls: number;
+  crew_tool_calls: number;
+  baseline_missing_requirements_count: number;
+  crew_missing_requirements_count: number;
+  score_differential: number;
+  synthesis_insights: string[];
+}
+
+
 

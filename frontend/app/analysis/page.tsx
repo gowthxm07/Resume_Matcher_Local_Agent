@@ -20,10 +20,24 @@ import {
   FileCode,
   ArrowRight,
   Zap,
+  Users,
+  Scale,
+  Bot,
 } from "lucide-react";
 
-import { analyzeMatch, fetchAnalysisEvidence } from "@/lib/api";
-import { AnalysisResult, RequirementMatchResult, EvidenceAssessment } from "@/types";
+import {
+  analyzeMatch,
+  fetchAnalysisEvidence,
+  runCrewAnalysis,
+  runBenchmarkAnalysis,
+} from "@/lib/api";
+import {
+  AnalysisResult,
+  RequirementMatchResult,
+  EvidenceAssessment,
+  FinalAnalysisDossier,
+  BenchmarkComparisonResult,
+} from "@/types";
 
 
 const SAMPLE_RESUME = `Alex Chen
@@ -96,6 +110,9 @@ export default function AnalysisPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "match" | "partial_match" | "missing">("all");
   const [filterType, setFilterType] = useState<"all" | "required" | "preferred">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [dossier, setDossier] = useState<FinalAnalysisDossier | null>(null);
+  const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkComparisonResult | null>(null);
+  const [activeAnalysisMode, setActiveAnalysisMode] = useState<"baseline" | "crew" | "benchmark">("baseline");
 
   const handleLoadSample = () => {
     setInputMode("text");
@@ -112,12 +129,62 @@ export default function AnalysisPage() {
     setError(null);
     setResult(null);
     setEvidenceAssessment(null);
+    setDossier(null);
+    setBenchmarkResult(null);
+    setActiveAnalysisMode("baseline");
   };
 
+  const handleRunCrewAnalysis = async () => {
+    setError(null);
+    if (!resumeText.trim() || !jdText.trim()) {
+      setError("Please provide both Resume text and Job Description text for multi-agent analysis.");
+      return;
+    }
+    setLoading(true);
+    setStatusMessage("Orchestrating 5 CrewAI agents (Manager, JD, Resume, Evidence, Match)...");
+    try {
+      const data = await runCrewAnalysis({
+        raw_resume_text: resumeText,
+        raw_jd_text: jdText,
+        use_live_llm: true,
+      });
+      setDossier(data);
+      setActiveAnalysisMode("crew");
+    } catch (err: any) {
+      setError(err?.message || "Failed to execute multi-agent analysis.");
+    } finally {
+      setLoading(false);
+      setStatusMessage("");
+    }
+  };
+
+  const handleRunBenchmark = async () => {
+    setError(null);
+    if (!resumeText.trim() || !jdText.trim()) {
+      setError("Please provide both Resume text and Job Description text for benchmark comparison.");
+      return;
+    }
+    setLoading(true);
+    setStatusMessage("Executing side-by-side benchmark (Baseline vs CrewAI Multi-Agent)...");
+    try {
+      const bData = await runBenchmarkAnalysis({
+        raw_resume_text: resumeText,
+        raw_jd_text: jdText,
+      });
+      setBenchmarkResult(bData);
+      setActiveAnalysisMode("benchmark");
+    } catch (err: any) {
+      setError(err?.message || "Failed to execute benchmark analysis.");
+    } finally {
+      setLoading(false);
+      setStatusMessage("");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setActiveAnalysisMode("baseline");
 
     if (inputMode === "text" && (!resumeText.trim() || !jdText.trim())) {
       setError("Please provide both Resume text and Job Description text.");
@@ -367,32 +434,267 @@ export default function AnalysisPage() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pt-2">
             <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
               <Cpu className="w-3.5 h-3.5 text-indigo-400" />
               <span>Ollama llama3.2:3b &bull; nomic-embed-text</span>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>{statusMessage || "Analyzing..."}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Execute Explainable Match Analysis</span>
-                </>
-              )}
-            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 hover:text-white font-medium text-xs transition-all border border-slate-700 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && activeAnalysisMode === "baseline" ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                )}
+                <span>A. Baseline Match (Phase 2)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRunCrewAnalysis}
+                disabled={loading}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && activeAnalysisMode === "crew" ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Users className="w-3.5 h-3.5 text-indigo-200" />
+                )}
+                <span>B. CrewAI Multi-Agent (Phase 4)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRunBenchmark}
+                disabled={loading}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 disabled:opacity-50 text-emerald-300 font-medium text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && activeAnalysisMode === "benchmark" ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+                <span>Compare &amp; Benchmark</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
+
+      {/* Multi-Agent CrewAI Dossier & Telemetry View */}
+      {dossier && activeAnalysisMode === "crew" && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          {/* Multi-Agent Header Banner */}
+          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-indigo-500/40 shadow-2xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-surface-border">
+              <div className="flex items-center gap-5">
+                <div className="relative w-24 h-24 rounded-2xl bg-slate-950 border border-indigo-500/30 flex flex-col items-center justify-center shrink-0 shadow-inner">
+                  <span className={`text-3xl font-extrabold tracking-tight ${getScoreColor(dossier.overall_match_score)}`}>
+                    {dossier.overall_match_score}%
+                  </span>
+                  <span className="text-[10px] uppercase font-mono text-slate-500 tracking-wider">
+                    Orchestrated
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-mono font-semibold">
+                      Mode: CrewAI Multi-Agent
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold">
+                      {dossier.classification}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Synthesized Candidate Analysis Dossier</h2>
+                  <p className="text-xs text-slate-400">
+                    5 Autonomous CrewAI agents coordinated by Manager Agent &bull; Zero Hallucination Guardrails
+                  </p>
+                </div>
+              </div>
+
+              {/* Evidence Confidence Counter */}
+              <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-surface-border">
+                <ShieldCheck className="w-8 h-8 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-lg font-bold text-white">
+                    {dossier.evidence_confidence_score}%
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Evidence Confidence ({dossier.verified_skills.length} verified)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Strengths & Gaps Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+              <div className="p-4 rounded-xl bg-slate-950/40 border border-emerald-500/20 space-y-2">
+                <h4 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Key Strengths &amp; Verified Competencies
+                </h4>
+                <ul className="space-y-1.5">
+                  {dossier.key_strengths.map((str, idx) => (
+                    <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                      <span className="text-emerald-400">&bull;</span>
+                      <span>{str}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950/40 border border-amber-500/20 space-y-2">
+                <h4 className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Identified Gaps &amp; Missing Requirements
+                </h4>
+                <ul className="space-y-1.5">
+                  {dossier.key_gaps.map((gap, idx) => (
+                    <li key={idx} className="text-xs text-slate-300 flex items-start gap-2">
+                      <span className="text-amber-400">&bull;</span>
+                      <span>{gap}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Agent Execution Telemetry Panel */}
+          {dossier.agent_execution_summary && (
+            <div className="p-6 rounded-2xl bg-surface border border-surface-border space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-surface-border">
+                <div className="flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-sm font-bold text-white">Agent Execution Telemetry</h3>
+                </div>
+                <div className="text-xs font-mono text-slate-400">
+                  Total: {dossier.agent_execution_summary.total_duration_ms} ms &bull; {dossier.agent_execution_summary.total_llm_invocations} LLM &bull; {dossier.agent_execution_summary.total_tool_invocations} Tools
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {dossier.agent_execution_summary.telemetry.map((t, idx) => (
+                  <div key={idx} className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-200">{t.agent_name}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        {t.status}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">{t.task_name}</p>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-800/80">
+                      <span>{t.duration_ms} ms</span>
+                      <span>{t.tool_invocations} tools</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-500 font-mono">Phase 5 Inactive Agents:</span>
+                {dossier.agent_execution_summary.agents_inactive.map((name, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50 text-[11px] font-mono text-slate-400">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Comparative Benchmark View */}
+      {benchmarkResult && activeAnalysisMode === "benchmark" && (
+        <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-emerald-500/40 shadow-2xl space-y-6 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+            <div className="flex items-center gap-3">
+              <Scale className="w-6 h-6 text-emerald-400" />
+              <div>
+                <h2 className="text-lg font-bold text-white">Comparative Benchmark: Baseline vs Multi-Agent</h2>
+                <p className="text-xs text-slate-400 font-mono">Contrasting deterministic Phase 2 vs CrewAI orchestration</p>
+              </div>
+            </div>
+            <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs">
+              Score Delta: {benchmarkResult.score_differential >= 0 ? `+${benchmarkResult.score_differential}` : benchmarkResult.score_differential}%
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Baseline Card */}
+            <div className="p-5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">A. Deterministic Baseline</span>
+                <span className="text-2xl font-extrabold text-indigo-400 font-mono">{benchmarkResult.baseline_match_score}%</span>
+              </div>
+              <div className="space-y-1.5 text-xs text-slate-400 font-mono">
+                <div className="flex justify-between">
+                  <span>Execution Time:</span>
+                  <span className="text-slate-200">{benchmarkResult.baseline_execution_ms} ms</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>LLM Invocations:</span>
+                  <span className="text-slate-200">{benchmarkResult.baseline_llm_calls}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tool Calls:</span>
+                  <span className="text-slate-200">{benchmarkResult.baseline_tool_calls}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Missing Gaps:</span>
+                  <span className="text-slate-200">{benchmarkResult.baseline_missing_requirements_count}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CrewAI Card */}
+            <div className="p-5 rounded-xl bg-slate-950/60 border border-indigo-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">B. CrewAI Multi-Agent</span>
+                <span className="text-2xl font-extrabold text-emerald-400 font-mono">{benchmarkResult.crew_match_score}%</span>
+              </div>
+              <div className="space-y-1.5 text-xs text-slate-400 font-mono">
+                <div className="flex justify-between">
+                  <span>Execution Time:</span>
+                  <span className="text-slate-200">{benchmarkResult.crew_execution_ms} ms</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>LLM Invocations:</span>
+                  <span className="text-slate-200">{benchmarkResult.crew_llm_calls}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tool Calls:</span>
+                  <span className="text-slate-200">{benchmarkResult.crew_tool_calls}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Missing Gaps:</span>
+                  <span className="text-slate-200">{benchmarkResult.crew_missing_requirements_count}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Insights List */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-surface-border space-y-2">
+            <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Benchmark Synthesis Insights</h4>
+            <ul className="space-y-1">
+              {benchmarkResult.synthesis_insights.map((insight, idx) => (
+                <li key={idx} className="text-xs text-slate-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Analysis Output Section */}
       {result && (

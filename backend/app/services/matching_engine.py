@@ -178,6 +178,137 @@ class MatchingEngine:
             ),
         )
 
+    def compute_match(
+        self,
+        resume: ResumeProfile,
+        job: JobProfile,
+        resume_id: Optional[str] = None,
+        job_description_id: Optional[str] = None,
+    ) -> AnalysisResult:
+        """
+        Execute synchronous deterministic baseline match assessment.
+        Evaluates requirements, technical depth, experience, education, keyword coverage,
+        and project relevance synchronously without async event loop constraints.
+        """
+        start_time = time.perf_counter()
+
+        # 1. Build candidate's normalized skills set and evidence map
+        candidate_skills_set, skill_evidence_map = self._build_candidate_evidence_map(resume)
+
+        # 2. Evaluate all categorized requirements
+        requirements_results: List[RequirementMatchResult] = []
+        matched_reqs: List[RequirementMatchResult] = []
+        partial_reqs: List[RequirementMatchResult] = []
+        missing_reqs: List[RequirementMatchResult] = []
+
+        req_skills_total = 0
+        req_skills_score_sum = 0.0
+        pref_skills_total = 0
+        pref_skills_score_sum = 0.0
+
+        for req in job.categorized_requirements:
+            res = self._evaluate_single_requirement(req, candidate_skills_set, skill_evidence_map, resume)
+            requirements_results.append(res)
+
+            if res.classification == MatchClassification.MATCH:
+                matched_reqs.append(res)
+                score_contrib = 1.0
+            elif res.classification == MatchClassification.PARTIAL_MATCH:
+                partial_reqs.append(res)
+                score_contrib = 0.5
+            else:
+                missing_reqs.append(res)
+                score_contrib = 0.0
+
+            if req.requirement_type == RequirementType.REQUIRED:
+                req_skills_total += 1
+                req_skills_score_sum += score_contrib
+            else:
+                pref_skills_total += 1
+                pref_skills_score_sum += score_contrib
+
+        # Calculate coverage scores (0 - 100)
+        required_score = (
+            (req_skills_score_sum / req_skills_total * 100.0)
+            if req_skills_total > 0
+            else 100.0
+        )
+        preferred_score = (
+            (pref_skills_score_sum / pref_skills_total * 100.0)
+            if pref_skills_total > 0
+            else 100.0
+        )
+
+        # 3. Technical Depth Score
+        tech_depth_score = self._compute_technical_depth(matched_reqs, skill_evidence_map)
+
+        # 4. Synchronous Project Relevance
+        project_rel_score, project_items = project_relevance_service.evaluate_projects_sync(resume, job)
+
+        # 5. Experience Alignment Score
+        exp_score = self._compute_experience_alignment(resume, job)
+
+        # 6. Education Alignment Score
+        edu_score = self._compute_education_alignment(resume, job)
+
+        # 7. Keyword Coverage Score
+        kw_score = self._compute_keyword_coverage(resume, job)
+
+        # Compute Weighted Overall Score
+        overall = (
+            (required_score * self.weights["required_skill_coverage"])
+            + (preferred_score * self.weights["preferred_skill_coverage"])
+            + (tech_depth_score * self.weights["technical_depth"])
+            + (project_rel_score * self.weights["project_relevance"])
+            + (exp_score * self.weights["experience_alignment"])
+            + (edu_score * self.weights["education_alignment"])
+            + (kw_score * self.weights["keyword_coverage"])
+        )
+        bounded_overall = round(max(0.0, min(100.0, overall)), 1)
+
+        dim_scores = DimensionScores(
+            required_skill_score=round(required_score, 1),
+            preferred_skill_score=round(preferred_score, 1),
+            technical_depth_score=round(tech_depth_score, 1),
+            project_relevance_score=round(project_rel_score, 1),
+            experience_alignment_score=round(exp_score, 1),
+            education_alignment_score=round(edu_score, 1),
+            keyword_coverage_score=round(kw_score, 1),
+        )
+
+        # Generate strong areas, weak areas, and summary explanation
+        strong_areas = [m.canonical_skill for m in matched_reqs[:6]]
+        weak_areas = [m.canonical_skill for m in missing_reqs if m.requirement_type == RequirementType.REQUIRED][:6]
+
+        summary = self._generate_summary_explanation(
+            bounded_overall,
+            dim_scores,
+            matched_reqs,
+            missing_reqs,
+            job,
+        )
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+
+        return AnalysisResult(
+            overall_score=bounded_overall,
+            dimension_scores=dim_scores,
+            scoring_weights={k: round(v, 3) for k, v in self.weights.items()},
+            requirements_analysis=requirements_results,
+            matched_requirements=matched_reqs,
+            partial_matches=partial_reqs,
+            missing_requirements=missing_reqs,
+            strong_areas=strong_areas,
+            weak_areas=weak_areas,
+            project_relevance=project_items,
+            summary_explanation=summary,
+            resume_id=resume_id,
+            job_description_id=job_description_id,
+            metadata=AnalysisMetadata(
+                analysis_time_ms=round(elapsed_ms, 2),
+            ),
+        )
+
     def _build_candidate_evidence_map(
         self, resume: ResumeProfile
     ) -> Tuple[Set[str], Dict[str, List[str]]]:

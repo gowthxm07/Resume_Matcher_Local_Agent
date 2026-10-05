@@ -65,6 +65,19 @@ from app.schemas.evidence import (
     EvidenceAssessment,
 )
 
+from app.schemas.dossier import (
+    JDAnalysisOutput,
+    ResumeAnalysisOutput,
+    EvidenceAnalysisOutput,
+    MatchAnalysisOutput,
+    AgentExecutionTelemetry,
+    FinalAnalysisDossier,
+    CrewAnalysisRequest,
+    CrewAnalysisResponse,
+    BenchmarkComparisonResult,
+    parse_agent_json_output,
+)
+
 __all__ = [
     "HealthResponse",
     "OllamaStatus",
@@ -116,5 +129,15 @@ __all__ = [
     "SkillVerificationResult",
     "EvidenceChainItem",
     "EvidenceAssessment",
+    "JDAnalysisOutput",
+    "ResumeAnalysisOutput",
+    "EvidenceAnalysisOutput",
+    "MatchAnalysisOutput",
+    "AgentExecutionTelemetry",
+    "FinalAnalysisDossier",
+    "CrewAnalysisRequest",
+    "CrewAnalysisResponse",
+    "BenchmarkComparisonResult",
+    "parse_agent_json_output",
 ]
 

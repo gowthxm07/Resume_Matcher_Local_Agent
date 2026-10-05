@@ -89,6 +89,19 @@ class SkillsInventory(BaseModel):
                 deduped.append(clean)
         return deduped
 
+    @property
+    def all_skills(self) -> List[str]:
+        """Aggregate all distinct technical and soft skills."""
+        all_s = self.all_technical_skills() + self.soft_skills
+        seen = set()
+        deduped = []
+        for s in all_s:
+            clean = s.strip()
+            if clean and clean.lower() not in seen:
+                seen.add(clean.lower())
+                deduped.append(clean)
+        return deduped
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -145,6 +158,19 @@ class ResumeProfile(BaseModel):
     publications: List[str] = Field(default_factory=list)
     raw_text_hash: Optional[str] = None
     extraction_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def name(self) -> str:
+        return self.candidate_name or "Candidate"
+
+    @property
+    def total_experience_years(self) -> float:
+        """Estimate candidate total years of experience from work experience and internships."""
+        if not self.work_experience and not self.internships:
+            return 0.0
+        exp_count = len(self.work_experience) + (len(self.internships) * 0.5)
+        return round(max(0.5, exp_count * 1.5), 1)
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -188,6 +214,11 @@ class JobProfile(BaseModel):
     domain_knowledge: List[str] = Field(default_factory=list)
     raw_text_hash: Optional[str] = None
     extraction_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def min_experience_years(self) -> Optional[float]:
+        return self.min_years_experience
+
     model_config = ConfigDict(extra="ignore")
 
 

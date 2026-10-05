@@ -244,4 +244,83 @@ Deterministic, local-only tools registered for the CrewAI `EvidenceAgent`:
 - `find_skill_evidence_tool`: Retrieves all indexed evidence records matching a given canonical skill.
 - `verify_skill_tool`: Evaluates candidate claims against repository evidence and outputs `VERIFIED`, `LIKELY`, `WEAK`, or `UNVERIFIED`.
 
+---
+
+## 10. Phase 4 CrewAI Multi-Agent Analysis Orchestration Layer
+
+Phase 4 activates the CrewAI multi-agent orchestration layer while strictly retaining deterministic services as ground truth. The multi-agent workflow coordinates 5 specialist agents through local Ollama (`llama3.2:3b`), delegating analysis responsibilities and producing an auditable `FinalAnalysisDossier`.
+
+### 10.1 Orchestration Topology & Sequence
+
+```
+                         [ User / API Client ]
+                                   │
+                                   ▼
+                       [ Manager Agent (Lead) ]
+                                   │
+        ┌──────────────────────────┴──────────────────────────┐
+        ▼                                                     ▼
+[ JD Analyzer Agent ]                               [ Resume Analyzer Agent ]
+  • classify_job_requirement                          • normalize_candidate_skill
+  • normalize_jd_skill                                • categorize_candidate_skill
+  • extract_experience_requirement                    • extract_experience
+        │                                                     │
+        └──────────────────────────┬──────────────────────────┘
+                                   ▼
+                         [ Evidence Agent ]
+                           • scan_git_repository
+                           • extract_commit_evidence
+                           • find_skill_evidence
+                           • verify_skill
+                                   │
+                                   ▼
+                      [ Match Analyzer Agent ]
+                        • calculate_baseline_match
+                        • retrieve_skill_evidence
+                                   │
+                                   ▼
+                       [ Manager Agent (Synthesis) ]
+                                   │
+                                   ▼
+                      [ Final Analysis Dossier ]
+```
+
+### 10.2 Strict Role-Based Tool Permission Boundaries
+
+To ensure security, determinism, and prevent privilege escalation across agents, tools are strictly partitioned using runtime access control checks:
+
+| Agent | Permitted Tools | Prohibited Operations |
+| :--- | :--- | :--- |
+| **Manager Agent** | *Zero technical tools* (Orchestration & synthesis only) | Filesystem access, Git scanning, database writes |
+| **JD Analyzer Agent** | `classify_job_requirement`, `normalize_jd_skill`, `extract_experience_requirement` | Git repos, resume modification, match calculation |
+| **Resume Analyzer Agent** | `normalize_candidate_skill`, `categorize_candidate_skill` | Git repos, JD classification, match calculation |
+| **Evidence Agent** | `scan_git_repository`, `extract_commit_evidence`, `find_skill_evidence`, `verify_skill` | Resume scoring, JD manipulation, overall matching |
+| **Match Analyzer Agent** | `calculate_baseline_match`, `retrieve_skill_evidence` | Direct Git access, arbitrary filesystem scans |
+| **Resume Optimizer Agent** | *Deferred to Phase 5* (`NotImplementedError`) | Active execution blocked in Phase 4 |
+| **Fact Checker Agent** | *Deferred to Phase 5* (`NotImplementedError`) | Active execution blocked in Phase 4 |
+| **ATS Validator Agent** | *Deferred to Phase 5* (`NotImplementedError`) | Active execution blocked in Phase 4 |
+| **Interview Agent** | *Deferred to Phase 5* (`NotImplementedError`) | Active execution blocked in Phase 4 |
+
+### 10.3 Hybrid Deterministic-Reasoning Architecture
+
+LLMs are not used for arithmetic or lookup operations. The system strictly separates concerns:
+1. **Deterministic Layer (Phase 2 & 3 Services)**:
+   - Skill canonicalization (`skill_normalizer`)
+   - Regex/AST project scanning (`git_scanner`, `detectors`)
+   - Multi-dimensional scoring formulas (`matching_engine`)
+   - Evidence confidence scoring (`evidence_service`)
+2. **Cognitive Layer (CrewAI Agents)**:
+   - Synthesizing qualitative findings into structured schemas
+   - Identifying nuanced candidate risks and high-risk requirements
+   - Assembling executive summaries and actionable takeaways
+   - Auditing discrepancies between resume claims and codebase evidence
+
+### 10.4 Comparative Benchmarking (`/api/analysis/benchmark`)
+
+The system offers a side-by-side benchmark mode that executes both:
+- **Execution Mode A (Deterministic Baseline)**: Pure deterministic evaluation ($\approx 5-20\text{ms}$).
+- **Execution Mode B (CrewAI Multi-Agent)**: Multi-agent orchestration with per-agent execution telemetry ($\approx 50-250\text{ms}$ deterministic fallback, $\approx 3-10\text{s}$ live LLM).
+- **Benchmark Metrics**: Compares overall match score, dimension scores, tool call volumes, execution latency, and generates synthetic differential insights.
+
+
 

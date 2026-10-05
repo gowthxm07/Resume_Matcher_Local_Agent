@@ -17,8 +17,14 @@ from app.services.extractor_service import extractor_service
 from app.services.matching_engine import matching_engine
 from app.schemas.intelligence import AnalysisResult
 from app.schemas.evidence import EvidenceAssessment
+from app.schemas.dossier import (
+    CrewAnalysisRequest,
+    CrewAnalysisResponse,
+    FinalAnalysisDossier,
+    BenchmarkComparisonResult,
+)
 from app.services.evidence_service import evidence_service
-
+from app.services.crew_service import crew_service
 
 
 router = APIRouter()
@@ -256,4 +262,75 @@ async def get_analysis_evidence(analysis_id: str, db: Session = Depends(get_db))
         job=job_profile,
         db=db,
     )
+
+
+@router.post("/analysis/crew", response_model=FinalAnalysisDossier, tags=["CrewAI Multi-Agent Intelligence"])
+async def run_crew_analysis(
+    payload: CrewAnalysisRequest,
+    db: Session = Depends(get_db),
+) -> FinalAnalysisDossier:
+    """
+    Execute full CrewAI multi-agent career intelligence analysis.
+    Orchestrates Manager, JD Analyzer, Resume Analyzer, Evidence, and Match Analyzer agents.
+    Produces an explainable FinalAnalysisDossier grounded in verified codebase evidence.
+    """
+    try:
+        dossier = crew_service.run_analysis(
+            resume_id=payload.resume_id,
+            job_description_id=payload.job_description_id,
+            project_ids=payload.project_ids,
+            raw_resume_text=payload.raw_resume_text,
+            raw_jd_text=payload.raw_jd_text,
+            db=db,
+            use_live_llm=payload.use_live_llm,
+        )
+        return dossier
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        logger.error(f"Error during Crew multi-agent analysis: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Multi-agent analysis failed: {str(exc)}")
+
+
+@router.get("/analysis/{analysis_id}/dossier", response_model=FinalAnalysisDossier, tags=["CrewAI Multi-Agent Intelligence"])
+async def get_analysis_dossier(
+    analysis_id: str,
+    db: Session = Depends(get_db),
+) -> FinalAnalysisDossier:
+    """
+    Retrieve stored FinalAnalysisDossier and agent execution telemetry for a completed analysis run.
+    """
+    run = db.scalar(select(AnalysisRun).where(AnalysisRun.id == analysis_id))
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Analysis run '{analysis_id}' not found.")
+    if not run.results_summary or "dossier" not in run.results_summary:
+        raise HTTPException(status_code=404, detail="No multi-agent dossier stored for this run.")
+
+    return FinalAnalysisDossier.model_validate(run.results_summary["dossier"])
+
+
+@router.post("/analysis/benchmark", response_model=BenchmarkComparisonResult, tags=["CrewAI Multi-Agent Intelligence"])
+async def run_benchmark_comparison(
+    payload: CrewAnalysisRequest,
+    db: Session = Depends(get_db),
+) -> BenchmarkComparisonResult:
+    """
+    Run comparative benchmark contrasting deterministic baseline analysis vs CrewAI multi-agent orchestration
+    on the exact same candidate resume + JD + project inputs.
+    """
+    try:
+        return crew_service.run_benchmark(
+            resume_id=payload.resume_id,
+            job_description_id=payload.job_description_id,
+            project_ids=payload.project_ids,
+            raw_resume_text=payload.raw_resume_text,
+            raw_jd_text=payload.raw_jd_text,
+            db=db,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        logger.error(f"Error during benchmark comparison: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Benchmark comparison failed: {str(exc)}")
+
 

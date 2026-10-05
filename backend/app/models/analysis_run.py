@@ -29,10 +29,14 @@ class AnalysisRun(Base):
     run_type: Mapped[str] = mapped_column(
         String(50), nullable=False, default="initial_assessment"
     )  # initial_assessment, match_scoring, optimization_loop, interview_prep
+    execution_mode: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, default="baseline"
+    )  # baseline, crew_multi_agent
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="pending"
     )  # pending, running, completed, failed
     match_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    evidence_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     results_summary: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSON, nullable=True, default=dict
     )

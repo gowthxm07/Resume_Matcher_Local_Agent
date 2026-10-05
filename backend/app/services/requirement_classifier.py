@@ -24,6 +24,24 @@ class RequirementClassifier:
     PREFERRED_KEYWORDS = ["nice to have", "plus", "preferred", "bonus", "optional", "desired", "advantageous"]
 
     @classmethod
+    def extract_experience_years(cls, text: str) -> Optional[float]:
+        """Extract minimum years of experience from requirement text."""
+        lowered = text.lower()
+        range_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\+?\s*years?", lowered)
+        if range_match:
+            try:
+                return float(range_match.group(1))
+            except ValueError:
+                pass
+        year_match = re.search(r"(\d+(?:\.\d+)?)\+?\s*years?", lowered)
+        if year_match:
+            try:
+                return float(year_match.group(1))
+            except ValueError:
+                return None
+        return None
+
+    @classmethod
     def classify_requirement(
         cls,
         req_text: str,
@@ -72,12 +90,7 @@ class RequirementClassifier:
         # 4. Extract years of experience if mentioned in text
         extracted_years = min_years
         if extracted_years is None:
-            year_match = re.search(r"(\d+(?:\.\d+)?)\+?\s*years?", lowered)
-            if year_match:
-                try:
-                    extracted_years = float(year_match.group(1))
-                except ValueError:
-                    pass
+            extracted_years = cls.extract_experience_years(cleaned)
 
         # 5. Compute importance
         importance = "medium"
@@ -122,3 +135,7 @@ class RequirementClassifier:
                 seen_canonicals.add(cr.canonical_skill.lower())
 
         return results
+
+
+# Export class alias for convenience
+requirement_classifier = RequirementClassifier
