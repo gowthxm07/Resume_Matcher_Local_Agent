@@ -23,6 +23,12 @@ import {
   Users,
   Scale,
   Bot,
+  Check,
+  Copy,
+  ShieldAlert,
+  Wand2,
+  History,
+  FileCheck,
 } from "lucide-react";
 
 import {
@@ -30,6 +36,7 @@ import {
   fetchAnalysisEvidence,
   runCrewAnalysis,
   runBenchmarkAnalysis,
+  optimizeResume,
 } from "@/lib/api";
 import {
   AnalysisResult,
@@ -37,6 +44,8 @@ import {
   EvidenceAssessment,
   FinalAnalysisDossier,
   BenchmarkComparisonResult,
+  OptimizeResponse,
+  ResumeVersionSchema,
 } from "@/types";
 
 
@@ -112,7 +121,11 @@ export default function AnalysisPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [dossier, setDossier] = useState<FinalAnalysisDossier | null>(null);
   const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkComparisonResult | null>(null);
-  const [activeAnalysisMode, setActiveAnalysisMode] = useState<"baseline" | "crew" | "benchmark">("baseline");
+  const [optimizationResult, setOptimizationResult] = useState<OptimizeResponse | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [copiedContent, setCopiedContent] = useState<boolean>(false);
+  const [filterChanges, setFilterChanges] = useState<"all" | "accepted" | "rejected">("all");
+  const [activeAnalysisMode, setActiveAnalysisMode] = useState<"baseline" | "crew" | "benchmark" | "optimization">("baseline");
 
   const handleLoadSample = () => {
     setInputMode("text");
@@ -131,7 +144,35 @@ export default function AnalysisPage() {
     setEvidenceAssessment(null);
     setDossier(null);
     setBenchmarkResult(null);
+    setOptimizationResult(null);
+    setSelectedVersionId(null);
     setActiveAnalysisMode("baseline");
+  };
+
+  const handleRunOptimization = async () => {
+    setError(null);
+    if (!resumeText.trim() || !jdText.trim()) {
+      setError("Please provide both Resume text and Job Description text for evidence-grounded optimization.");
+      return;
+    }
+    setLoading(true);
+    setStatusMessage("Executing Phase 5 multi-agent optimization: Proposing rewrites, Fact-checking against repositories, ATS validating...");
+    try {
+      const data = await optimizeResume({
+        raw_resume_text: resumeText,
+        raw_jd_text: jdText,
+        max_iterations: 3,
+        use_live_llm: false,
+      });
+      setOptimizationResult(data);
+      setSelectedVersionId(data.final_version.id);
+      setActiveAnalysisMode("optimization");
+    } catch (err: any) {
+      setError(err?.message || "Failed to execute resume optimization.");
+    } finally {
+      setLoading(false);
+      setStatusMessage("");
+    }
   };
 
   const handleRunCrewAnalysis = async () => {
@@ -481,6 +522,20 @@ export default function AnalysisPage() {
                 )}
                 <span>Compare &amp; Benchmark</span>
               </button>
+
+              <button
+                type="button"
+                onClick={handleRunOptimization}
+                disabled={loading}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold text-xs transition-all shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading && activeAnalysisMode === "optimization" ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Wand2 className="w-3.5 h-3.5 text-purple-200" />
+                )}
+                <span>D. Resume Optimizer (Phase 5)</span>
+              </button>
             </div>
           </div>
         </form>
@@ -696,8 +751,526 @@ export default function AnalysisPage() {
         </div>
       )}
 
+      {/* Evidence-Grounded Resume Optimization View (Phase 5) */}
+      {optimizationResult && activeAnalysisMode === "optimization" && (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          {/* Hero Banner: Optimization Dossier & Score Progression */}
+          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-purple-500/40 shadow-2xl space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-surface-border">
+              <div className="flex items-center gap-5">
+                <div className="relative w-24 h-24 rounded-2xl bg-slate-950 border border-purple-500/30 flex flex-col items-center justify-center shrink-0 shadow-inner">
+                  <span className={`text-3xl font-extrabold tracking-tight ${getScoreColor(optimizationResult.dossier.final_match_score)}`}>
+                    {optimizationResult.dossier.final_match_score}%
+                  </span>
+                  <span className="text-[10px] uppercase font-mono text-purple-400 tracking-wider">
+                    Optimized
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-mono font-semibold">
+                      Phase 5 Multi-Agent
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold">
+                      Iteration {optimizationResult.dossier.iterations_run} / {optimizationResult.dossier.max_iterations}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-mono font-semibold">
+                      Status: {optimizationResult.final_version.status}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Evidence-Grounded Resume Optimization</h2>
+                  <p className="text-xs text-slate-400">
+                    Proposals strictly audited by FactCheckerAgent against local Git repositories &bull; Deterministic ATS validation
+                  </p>
+                </div>
+              </div>
+
+              {/* Guardrail Safety Badge */}
+              <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-surface-border">
+                <ShieldCheck className="w-8 h-8 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-lg font-bold text-white">
+                    {optimizationResult.dossier.final_evidence_confidence}%
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Evidence Confidence (100% Grounded)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Score Comparison Tri-Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-950/40 border border-purple-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Match Score Progression</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    {optimizationResult.dossier.score_improvement >= 0 ? `+${optimizationResult.dossier.score_improvement}` : optimizationResult.dossier.score_improvement}%
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-sm font-mono text-slate-500 line-through">
+                    {optimizationResult.dossier.baseline_match_score}%
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-2xl font-extrabold text-white font-mono">
+                    {optimizationResult.dossier.final_match_score}%
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Targeted keyword alignment &amp; validated competency enhancements
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950/40 border border-indigo-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">ATS Parseability Heuristic</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {optimizationResult.dossier.ats_improvement >= 0 ? `+${optimizationResult.dossier.ats_improvement}` : optimizationResult.dossier.ats_improvement}%
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-sm font-mono text-slate-500 line-through">
+                    {optimizationResult.dossier.baseline_ats_score}%
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-2xl font-extrabold text-white font-mono">
+                    {optimizationResult.dossier.final_ats_score}%
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Verified structural parseability &amp; skill density distribution
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950/40 border border-emerald-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Modifications Audit</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {optimizationResult.dossier.total_accepted_changes} Accepted
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-2xl font-extrabold text-white font-mono">
+                    {optimizationResult.dossier.total_proposed_changes}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    Proposed &bull; {optimizationResult.dossier.total_rejected_changes} Inventions Rejected
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Strict fact-checking zero tolerance for unsupported claims
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Strict Anti-Hallucination Guardrails & Fact-Checking Report */}
+          <div className="p-6 rounded-2xl bg-surface border border-surface-border space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+              <div className="flex items-center gap-3">
+                <ShieldAlert className="w-6 h-6 text-purple-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Fact-Checker Agent Guardrails (Anti-Hallucination)</h3>
+                  <p className="text-xs text-slate-400">
+                    Guarantees CareerCrew never invents skills, metrics, or technologies to artificially boost score
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Zero Unverified Inventions
+                </span>
+              </div>
+            </div>
+
+            {/* Rejected / Safeguarded Inventions List */}
+            {optimizationResult.dossier.rejected_changes.length > 0 ? (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>
+                    The Fact-Checker detected and rejected {optimizationResult.dossier.rejected_changes.length} unverified modification(s) lacking candidate repository evidence.
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {optimizationResult.dossier.rejected_changes.map((rej, idx) => (
+                    <div key={idx} className="p-4 rounded-xl bg-slate-950/60 border border-rose-500/30 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                          {rej.section} &bull; {rej.change_type}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-rose-400">
+                          REJECTED ({rej.fact_check_status || "UNSUPPORTED"})
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        Proposed text: &ldquo;{rej.proposed_text}&rdquo;
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        <span className="text-rose-400 font-semibold">Fact-Check Rationale: </span>
+                        {rej.fact_check_reason || rej.reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <p className="text-xs text-slate-300">
+                  All proposed modifications were successfully corroborated by concrete repository artifacts (Docker, schemas, commits, and source code). No candidate inventions occurred.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ATS Heuristic Diagnostic Panel */}
+          <div className="p-6 rounded-2xl bg-surface border border-surface-border space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+              <div className="flex items-center gap-3">
+                <FileCheck className="w-6 h-6 text-indigo-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Deterministic ATS Compatibility Report</h3>
+                  <p className="text-xs text-slate-400">
+                    Algorithmic parser testing: section headers, keyword distribution, formatting safety
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-mono font-semibold border ${
+                  optimizationResult.dossier.ats_validation.is_ats_compliant
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                    : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                }`}>
+                  Score: {optimizationResult.dossier.ats_validation.overall_ats_score}/100 &bull; {optimizationResult.dossier.ats_validation.is_ats_compliant ? "ATS Compliant" : "Review Recommended"}
+                </span>
+              </div>
+            </div>
+
+            {/* ATS Metric Breakdown Bars */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Parseability Score</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.parseability_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.parseability_score}%` }} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Section Structure</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.section_structure_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.section_structure_score}%` }} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Required Skill Coverage</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.required_skill_coverage_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.required_skill_coverage_score}%` }} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Preferred Skill Coverage</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.preferred_skill_coverage_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.preferred_skill_coverage_score}%` }} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Keyword Distribution</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.keyword_distribution_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.keyword_distribution_score}%` }} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Formatting Safety</span>
+                  <span className="font-mono font-bold text-white">{optimizationResult.dossier.ats_validation.formatting_safety_score}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${optimizationResult.dossier.ats_validation.formatting_safety_score}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Sections & Skills Chips */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+                <span className="text-xs font-semibold text-slate-300">Identified Standard Sections:</span>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {optimizationResult.dossier.ats_validation.identified_sections.map((sec, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-[11px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
+                      {sec}
+                    </span>
+                  ))}
+                  {optimizationResult.dossier.ats_validation.missing_standard_sections.map((sec, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                      Missing: {sec}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+                <span className="text-xs font-semibold text-slate-300">Target Skills Covered:</span>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {optimizationResult.dossier.ats_validation.matched_required_skills.map((skill, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                      &check; {skill}
+                    </span>
+                  ))}
+                  {optimizationResult.dossier.ats_validation.missing_required_skills.map((skill, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-[11px] font-mono bg-rose-500/10 text-rose-300 border border-rose-500/30">
+                      &cross; {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Mandatory ATS Disclaimer Banner */}
+            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 font-mono leading-relaxed">
+              <span className="text-indigo-400 font-bold font-sans">Disclaimer: </span>
+              {optimizationResult.dossier.disclaimer}
+            </div>
+          </div>
+
+          {/* Resume Version History & Content Viewer */}
+          <div className="p-6 rounded-2xl bg-surface border border-surface-border space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+              <div className="flex items-center gap-3">
+                <History className="w-6 h-6 text-purple-400" />
+                <div>
+                  <h3 className="text-base font-bold text-white">Immutable Resume Versions</h3>
+                  <p className="text-xs text-slate-400">
+                    Switch between versions to compare original vs. intermediate iterations vs. final accepted draft
+                  </p>
+                </div>
+              </div>
+
+              {/* Version Selector Tabs */}
+              <div className="flex flex-wrap items-center gap-2">
+                {optimizationResult.versions.map((v) => {
+                  const isSelected = selectedVersionId ? selectedVersionId === v.id : v.id === optimizationResult.final_version.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVersionId(v.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
+                        isSelected
+                          ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                          : "bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800"
+                      }`}
+                    >
+                      Iter {v.iteration} ({v.status})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Version Body */}
+            {(() => {
+              const activeVersion = optimizationResult.versions.find((v) => v.id === selectedVersionId) || optimizationResult.final_version;
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono text-slate-400 pb-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span>Version ID: {activeVersion.id.slice(0, 8)}</span>
+                      <span>Status: <strong className="text-purple-300">{activeVersion.status}</strong></span>
+                      {activeVersion.match_score !== null && (
+                        <span>Match: <strong className="text-emerald-400">{activeVersion.match_score}%</strong></span>
+                      )}
+                      {activeVersion.ats_score !== null && (
+                        <span>ATS: <strong className="text-indigo-400">{activeVersion.ats_score}%</strong></span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeVersion.content);
+                        setCopiedContent(true);
+                        setTimeout(() => setCopiedContent(false), 2000);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-sans transition-colors cursor-pointer"
+                    >
+                      {copiedContent ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Copy Resume Text</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="p-4 rounded-xl bg-slate-950 border border-surface-border text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
+                    {activeVersion.content}
+                  </pre>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Proposed Modifications & Diff Audit Trail */}
+          <div className="p-6 rounded-2xl bg-surface border border-surface-border space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
+              <div>
+                <h3 className="text-base font-bold text-white">Modifications Audit Trail</h3>
+                <p className="text-xs text-slate-400">
+                  Detailed inspection of proposed sentence changes, verification status, and rationale
+                </p>
+              </div>
+
+              {/* Filter Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFilterChanges("all")}
+                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
+                    filterChanges === "all" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  All ({optimizationResult.dossier.total_proposed_changes})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterChanges("accepted")}
+                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
+                    filterChanges === "accepted" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Accepted ({optimizationResult.dossier.total_accepted_changes})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterChanges("rejected")}
+                  className={`px-2.5 py-1 text-xs rounded-md font-medium transition-colors ${
+                    filterChanges === "rejected" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Rejected ({optimizationResult.dossier.total_rejected_changes})
+                </button>
+              </div>
+            </div>
+
+            {/* List of Changes */}
+            <div className="space-y-3">
+              {(() => {
+                const allChanges = [
+                  ...optimizationResult.dossier.accepted_changes,
+                  ...optimizationResult.dossier.rejected_changes,
+                ];
+                const displayed = allChanges.filter((ch) => {
+                  if (filterChanges === "accepted") return ch.fact_check_status === "VERIFIED" || ch.fact_check_status === "REPAIRED";
+                  if (filterChanges === "rejected") return ch.fact_check_status === "REJECTED" || ch.fact_check_status === "UNSUPPORTED";
+                  return true;
+                });
+
+                if (displayed.length === 0) {
+                  return (
+                    <div className="p-8 text-center text-xs text-slate-500 border border-dashed border-surface-border rounded-xl">
+                      No changes found for active filter.
+                    </div>
+                  );
+                }
+
+                return displayed.map((ch, idx) => {
+                  const isAccepted = ch.fact_check_status === "VERIFIED" || ch.fact_check_status === "REPAIRED";
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-xl border transition-colors space-y-3 ${
+                        isAccepted
+                          ? "bg-slate-900/60 border-emerald-500/20"
+                          : "bg-slate-900/60 border-rose-500/20"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                            {ch.section}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            {ch.change_type}
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
+                            isAccepted
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                          }`}
+                        >
+                          {ch.fact_check_status}
+                        </span>
+                      </div>
+
+                      {/* Diff Blocks */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                        <div className="p-3 rounded-lg bg-rose-500/5 border border-rose-500/20 text-slate-300 space-y-1">
+                          <span className="text-[10px] uppercase font-bold text-rose-400">Original Bullet:</span>
+                          <p>&ldquo;{ch.original_text}&rdquo;</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-slate-300 space-y-1">
+                          <span className="text-[10px] uppercase font-bold text-emerald-400">Proposed Modification:</span>
+                          <p>&ldquo;{ch.proposed_text}&rdquo;</p>
+                        </div>
+                      </div>
+
+                      {/* Rationale & Evidence */}
+                      <div className="text-xs space-y-1 pt-1">
+                        <p className="text-slate-400">
+                          <strong className="text-slate-300">Rationale: </strong>
+                          {ch.reason}
+                        </p>
+                        {ch.fact_check_reason && (
+                          <p className="text-indigo-300 font-mono">
+                            <strong className="text-slate-400 font-sans">Fact Check Note: </strong>
+                            {ch.fact_check_reason}
+                          </p>
+                        )}
+                        {ch.grounding_evidence_ids && ch.grounding_evidence_ids.length > 0 && (
+                          <p className="text-[11px] font-mono text-slate-500">
+                            Evidence IDs: {ch.grounding_evidence_ids.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Analysis Output Section */}
-      {result && (
+      {result && activeAnalysisMode === "baseline" && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Hero Overview Card */}
           <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-surface-border shadow-2xl">

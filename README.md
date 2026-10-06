@@ -31,9 +31,12 @@ Modern job hunting exposes candidates to opaque AI screening algorithms and priv
 | **Interactive Analysis UI** | Full Next.js 14 dashboard with 7 dimension cards, requirement filters, and local AI telemetry. | **Phase 2** (Done) |
 | **Code Evidence Scanning** | Scan local Git repositories and commit logs using GitPython to ground resume claims in real code. | **Phase 3** (Done) |
 | **Evidence Grounding UI** | Project registry (`/projects`) and 4-part evidence chain contrast against baseline match score. | **Phase 3** (Done) |
-| **Zero-Hallucination Loop** | Iterative feedback loop between Resume Optimizer and Fact Checker to rewrite resumes. | **Phase 4** (Planned) |
-| **ATS Emulation & Scoring** | Emulate enterprise ATS parsers (Taleo, Greenhouse, Workday) for structure and keyword density. | **Phase 4** (Planned) |
-| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 4** (Planned) |
+| **CrewAI Multi-Agent Layer** | 5 active CrewAI agents coordinating analysis via deterministic tools and producing dossiers. | **Phase 4** (Done) |
+| **Evidence Resume Optimizer** | Iterative rewriting loop (max 3 iters) enhancing technical specificity without inventing claims. | **Phase 5** (Done) |
+| **Fact Checker Agent** | Anti-hallucination verification rejecting unsupported skills/metrics and repairing claims. | **Phase 5** (Done) |
+| **Deterministic ATS Validator** | Algorithmic parseability, section structure, keyword distribution, and formatting risk scoring. | **Phase 5** (Done) |
+| **Immutable Resume Versioning** | Full version history preserving `ORIGINAL` baseline through `FINAL` with diffs and audit trail. | **Phase 5** (Done) |
+| **Grounded Interview Prep** | Generate technical deep dives and STAR behavioral questions grounded in real project evidence. | **Phase 6** (Planned) |
 
 ---
 
@@ -244,10 +247,20 @@ Open **http://localhost:3000** in your browser.
   - [x] Agent execution telemetry tracking per-agent latency, LLM invocations, and tool invocations
   - [x] Full Next.js 14 frontend integration with triple execution buttons, telemetry panels, and comparative benchmark view
   - [x] 124/124 automated tests passing + 10/10 Phase 4 audit checks passing (100%)
-- [ ] **Phase 5: Multi-Agent Optimization, Fact-Checking & Interview Preparation**
-  - [ ] Implement iterative Resume Optimizer <-> Fact Checker zero-hallucination loop
-  - [ ] Implement ATS Validator emulation for major enterprise systems (Taleo, Greenhouse, Workday)
-  - [ ] Implement Grounded Interview Preparation generator (STAR format + technical deep dives)
+- [x] **Phase 5: Evidence-Grounded Resume Optimization, Fact Checking & ATS Validation**
+  - [x] Activated 3 specialist CrewAI agents (`ResumeOptimizerAgent`, `FactCheckerAgent`, `ATSValidatorAgent`)
+  - [x] Strictly preserved boundary for deferred `InterviewAgent` (raises `NotImplementedError`)
+  - [x] Iterative, bounded optimization loop (`MAX_ITERATIONS = 3`) with non-regression acceptance criteria
+  - [x] Deterministic `FactCheckerService`: atomic claim extraction, canonical aliases, technology hierarchy, metric stripping
+  - [x] Zero-hallucination guardrail: strict rejection of ungrounded skills (e.g. AWS) and fabricated performance numbers
+  - [x] Deterministic `ATSService`: parseability score, section structure, keyword distribution, formatting hazard detection, and mandatory disclaimer
+  - [x] Immutable `ResumeVersion` database schema: full lifecycle from `ORIGINAL` (Iteration 0) through `FINAL`
+  - [x] REST endpoints: `POST /api/analysis/optimize`, `GET /api/resumes/{id}/versions`, `GET /api/analysis/{id}/audit`
+  - [x] Interactive Next.js 14 Optimization UI: score progression tri-cards, anti-hallucination audit panel, ATS diagnostics, version switcher, diff viewer
+  - [x] 156/156 automated tests passing + 12/12 Phase 5 verification checks passing (100%)
+- [ ] **Phase 6: Grounded Interview Preparation & Job Application Tracking**
+  - [ ] Activate `InterviewAgent` for evidence-grounded STAR behavioral questions and technical deep dives
+  - [ ] Implement Job Application lifecycle tracking (`/applications`)
   - [ ] Export optimized resumes to PDF and DOCX formats
 
 ---

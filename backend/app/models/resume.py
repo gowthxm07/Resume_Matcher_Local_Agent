@@ -38,6 +38,7 @@ class Resume(Base):
     # Relationships for future analysis and applications
     applications = relationship("Application", back_populates="resume", cascade="all, delete-orphan")
     analysis_runs = relationship("AnalysisRun", back_populates="resume", cascade="all, delete-orphan")
+    versions = relationship("ResumeVersion", back_populates="resume", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Resume id={self.id} filename={self.filename} status={self.status}>"

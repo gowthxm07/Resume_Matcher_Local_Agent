@@ -309,5 +309,68 @@ npm run typecheck
 npm run build
 ```
 
+---
+
+## 11. Phase 5: Resume Optimization, Fact Checking & ATS Validation Testing
+
+### 11.1 Running Resume Optimization via API
+Execute end-to-end evidence-grounded optimization:
+```bash
+curl -X POST http://127.0.0.1:8000/api/analysis/optimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_resume_text": "Alex Chen\nSenior Backend Engineer\nPython, FastAPI, and Docker experience.",
+    "raw_jd_text": "Senior Backend Engineer requiring Python, FastAPI, Docker, and PostgreSQL.",
+    "project_ids": [],
+    "max_iterations": 3,
+    "use_live_llm": false
+  }'
+```
+
+### 11.2 Inspecting Resume Versions & Audit Trail
+Query immutable resume versions:
+```bash
+curl http://127.0.0.1:8000/api/resumes/{resume_id}/versions
+```
+
+Retrieve detailed audit trail for an optimization run:
+```bash
+curl http://127.0.0.1:8000/api/analysis/{analysis_id}/audit
+```
+
+### 11.3 Running Phase 5 Test Suites (32 Tests)
+Run only the Phase 5 test suites:
+```bash
+cd backend
+python -m pytest tests/test_resume_optimizer_agent.py tests/test_fact_checker_agent.py tests/test_ats_validator_agent.py tests/test_optimization_loop.py tests/test_phase5_synthetic.py tests/test_phase5_security_permissions.py tests/test_optimization_api.py -v
+```
+
+### 11.4 Complete Regression Test Suite (156 Tests)
+Run the entire backend test suite:
+```bash
+cd backend
+python -m pytest tests -q
+```
+All 156 tests pass across Phase 1 through Phase 5.
+
+### 11.5 Automated Phase 5 Verification
+Run the 12-point automated verification script:
+```bash
+python scripts/verify_phase5.py
+```
+This script audits:
+1. Local-Only Privacy & Zero Cloud Dependency Audit
+2. 9-Agent Architecture & Phase 5 Activation State
+3. Strict Agent Tool Permissions & Role Access Control Boundaries
+4. Deterministic ATS Validation Engine & Heuristic Disclaimer
+5. Deterministic Fact-Checking Service (Atomic claims, canonicalization, metric repair)
+6. Anti-Hallucination Guardrails (Strict rejection of ungrounded skills and metrics)
+7. Immutable Resume Versioning (ORIGINAL baseline preserved, FINAL designated)
+8. Bounded Iterative Optimization Loop (Max 3 iterations, regression prevention)
+9. Synthetic Scenario A (High-evidence candidate: verified improvements)
+10. Synthetic Scenario B (Skill gap: missing required skills NOT manufactured)
+11. Synthetic Scenario C (Inflated claims: unverified metrics stripped/repaired)
+12. Comprehensive Audit Trail & Persisted Analysis Run
+
 
 

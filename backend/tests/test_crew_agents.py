@@ -18,13 +18,16 @@ from app.core.config import settings
 
 
 def test_active_agents_instantiation():
-    """Verify that all 5 Phase 4 active agents instantiate properly with role and goals."""
+    """Verify that all active agents instantiate properly with role and goals."""
     active_classes = [
         ManagerAgent,
         JDAnalyzerAgent,
         ResumeAnalyzerAgent,
         EvidenceAgent,
         MatchAnalyzerAgent,
+        ResumeOptimizerAgent,
+        FactCheckerAgent,
+        ATSValidatorAgent,
     ]
 
     for cls in active_classes:
@@ -36,11 +39,8 @@ def test_active_agents_instantiation():
 
 
 def test_inactive_agents_raise_not_implemented():
-    """Verify that the 4 Phase 5 deferred agents raise NotImplementedError when created."""
+    """Verify that deferred agents (InterviewAgent) raise NotImplementedError when created."""
     inactive_classes = [
-        ResumeOptimizerAgent,
-        FactCheckerAgent,
-        ATSValidatorAgent,
         InterviewAgent,
     ]
 

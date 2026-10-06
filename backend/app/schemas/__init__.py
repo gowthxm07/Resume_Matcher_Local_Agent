@@ -78,6 +78,22 @@ from app.schemas.dossier import (
     parse_agent_json_output,
 )
 
+from app.schemas.optimization import (
+    ChangeType,
+    ClaimCategory,
+    FactCheckStatus,
+    VersionStatus,
+    FactualClaim,
+    OptimizationChange,
+    FactCheckResult,
+    ATSValidationResult,
+    ResumeVersionSchema,
+    OptimizationIterationResult,
+    OptimizationDossier,
+    OptimizeRequest,
+    OptimizeResponse,
+)
+
 __all__ = [
     "HealthResponse",
     "OllamaStatus",
@@ -139,5 +155,18 @@ __all__ = [
     "CrewAnalysisResponse",
     "BenchmarkComparisonResult",
     "parse_agent_json_output",
+    "ChangeType",
+    "ClaimCategory",
+    "FactCheckStatus",
+    "VersionStatus",
+    "FactualClaim",
+    "OptimizationChange",
+    "FactCheckResult",
+    "ATSValidationResult",
+    "ResumeVersionSchema",
+    "OptimizationIterationResult",
+    "OptimizationDossier",
+    "OptimizeRequest",
+    "OptimizeResponse",
 ]
 

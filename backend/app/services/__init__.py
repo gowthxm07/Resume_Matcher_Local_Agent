@@ -10,6 +10,8 @@ from app.services.requirement_classifier import RequirementClassifier
 from app.services.extractor_service import ExtractorService, extractor_service
 from app.services.project_relevance import ProjectRelevanceService, project_relevance_service
 from app.services.matching_engine import MatchingEngine, matching_engine
+from app.services.ats_service import ATSService
+from app.services.fact_checker_service import FactCheckerService
 
 __all__ = [
     "OllamaService",
@@ -28,4 +30,6 @@ __all__ = [
     "project_relevance_service",
     "MatchingEngine",
     "matching_engine",
+    "ATSService",
+    "FactCheckerService",
 ]

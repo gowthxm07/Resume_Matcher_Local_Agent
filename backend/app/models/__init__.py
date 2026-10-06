@@ -8,6 +8,7 @@ from app.models.project import Project
 from app.models.evidence_record import EvidenceRecord
 from app.models.application import Application
 from app.models.analysis_run import AnalysisRun
+from app.models.resume_version import ResumeVersion
 
 __all__ = [
     "Resume",
@@ -16,4 +17,5 @@ __all__ = [
     "EvidenceRecord",
     "Application",
     "AnalysisRun",
+    "ResumeVersion",
 ]

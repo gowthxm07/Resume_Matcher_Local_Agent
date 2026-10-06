@@ -8,6 +8,10 @@ import {
   EvidenceAssessment,
   FinalAnalysisDossier,
   BenchmarkComparisonResult,
+  OptimizeRequest,
+  OptimizeResponse,
+  ResumeVersionSchema,
+  OptimizationDossier,
 } from "@/types";
 
 
@@ -222,6 +226,56 @@ export async function runBenchmarkAnalysis(payload: {
     const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
     throw new Error(err.detail || `Benchmark failed: HTTP ${res.status}`);
   }
+  return res.json();
+}
+
+export async function optimizeResume(payload: OptimizeRequest): Promise<OptimizeResponse> {
+  const res = await fetch(`${API_BASE}/analysis/optimize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `Resume optimization failed: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchResumeVersions(resumeId: string): Promise<ResumeVersionSchema[]> {
+  const res = await fetch(`${API_BASE}/resumes/${resumeId}/versions`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch resume versions: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchResumeVersion(
+  resumeId: string,
+  versionId: string
+): Promise<ResumeVersionSchema> {
+  const res = await fetch(`${API_BASE}/resumes/${resumeId}/versions/${versionId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch resume version: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchOptimizationSummary(analysisId: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/analysis/${analysisId}/optimization`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch optimization summary: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchOptimizationAudit(
+  analysisId: string
+): Promise<{ analysis_id: string; audit_trail: Record<string, any>[]; total_audited_changes: number }> {
+  const res = await fetch(`${API_BASE}/analysis/${analysisId}/audit`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch optimization audit: HTTP ${res.status}`);
   return res.json();
 }
 

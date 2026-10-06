@@ -322,5 +322,78 @@ The system offers a side-by-side benchmark mode that executes both:
 - **Execution Mode B (CrewAI Multi-Agent)**: Multi-agent orchestration with per-agent execution telemetry ($\approx 50-250\text{ms}$ deterministic fallback, $\approx 3-10\text{s}$ live LLM).
 - **Benchmark Metrics**: Compares overall match score, dimension scores, tool call volumes, execution latency, and generates synthetic differential insights.
 
+---
+
+## 11. Phase 5: Evidence-Grounded Resume Optimization, Fact Checking & ATS Validation
+
+### 11.1 Architecture & Workflow Loop
+
+CareerCrew Phase 5 implements a closed-loop multi-agent optimization cycle that iteratively improves resume match and ATS parseability without ever hallucinating or manufacturing claims:
+
+```
+                  [ Baseline Match Analysis (Phase 2/4) ]
+                                    │
+                                    ▼
+       ┌───────────────────> [ 1. Optimizer Agent ]
+       │                     - Identifies JD gaps with candidate evidence
+       │                     - Proposes technical specificity edits
+       │                                    │
+       │                                    ▼
+       │                     [ 2. Fact Checker Agent ]
+       │                     - Extracts atomic claims (skills, metrics)
+       │                     - Compares against local Git repository evidence
+       │                     - VERIFIED: Pass to candidate text
+       │                     - PARTIALLY_SUPPORTED: Strips unverified metrics
+       │                     - UNSUPPORTED / CONTRADICTED: Rejects proposal
+       │                                    │
+       │                                    ▼
+       │                     [ 3. Deterministic ATS Validator ]
+       │                     - Heuristic structure & parseability check
+       │                     - Keyword stuffing penalty & formatting safety
+       │                                    │
+       │                                    ▼
+       │                     [ 4. Acceptance Evaluation ]
+       │                     - Match score improved or maintained?
+       │                     - Evidence confidence maintained without regression?
+       │                     - ATS compatibility preserved?
+       │                            │               │
+       │                     YES    │               │ NO
+       │                            ▼               ▼
+       │             [ Immutable ResumeVersion ]   [ Discard Candidate ]
+       │                     (ACCEPTED)              (Halt / Retry)
+       │                            │
+       └───── Loop bounded to ──────┘
+              MAX_ITERATIONS = 3
+                                    │
+                                    ▼
+                        [ Final Version Snapshot ]
+                          (Status: "FINAL")
+```
+
+### 11.2 Strict Anti-Hallucination Guardrails & Zero Inventions Rule
+
+The core product principle is: **CareerCrew never manufactures claims to artificially game match scores.**
+- **Skill Gaps Without Evidence**: If a job requires a skill (e.g., AWS, Kubernetes) but the candidate's repository evidence does not contain proof of that skill, the optimizer will **NEVER** inject the skill. The requirement truthfully remains missing.
+- **Metric Verification**: Quantitative performance numbers (e.g., "10x throughput", "reduced latency by 45%", "serving 50,000 users") are audited against evidence snippets. If unverified, the FactChecker deterministically strips the metric phrase while retaining verified technical facts (`PARTIALLY_SUPPORTED` repaired status).
+- **Canonical Technology Aliasing**: Evaluates framework implications (e.g., Next.js implies JavaScript, FastAPI implies Python) while strictly rejecting cross-domain leaps.
+
+### 11.3 Deterministic ATS Compatibility Engine
+
+ATS validation is implemented purely algorithmically (`ATSService`) without relying on probabilistic LLM estimates:
+- **Parseability Score**: Verifies plain text serialization, ASCII characters, and non-corrupted text streams.
+- **Section Structure Score**: Identifies standard section headers (`Summary`, `Experience`, `Projects`, `Skills`, `Education`, `Certifications`, `Achievements`).
+- **Keyword Distribution Score**: Calculates required and preferred skill density across sections.
+- **Keyword Stuffing Penalizer**: Detects and penalizes repetitive keyword flooding ($>5$ occurrences of a single term).
+- **Formatting Safety Audit**: Flags non-standard ASCII divider spam, excessive blank streaks, and dangerous table artifacts.
+- **Mandatory Heuristic Disclaimer**: Every ATS result permanently includes the required product notice:
+  > *"ATS scores are heuristic estimates of machine parseability and keyword alignment, not guarantees of employer ATS platform outcomes."*
+
+### 11.4 Immutable Resume Versioning & Audit Storage
+
+Every optimization execution produces persistent, immutable records in SQLite:
+- **`ResumeVersion` Model**: Stores `iteration`, `content`, `match_score`, `ats_score`, `evidence_confidence`, `status` (`ORIGINAL`, `CANDIDATE`, `ACCEPTED`, `FINAL`), `change_summary`, and `audit_trail`.
+- **Iteration 0**: Always created as `status="ORIGINAL"` to guarantee candidate baseline text is never lost or overwritten.
+- **Audit Trail**: Every proposed modification records `change_id`, `original_text`, `proposed_text`, `change_type`, `fact_check_status`, `reason`, and supporting `evidence_ids`.
+
 
 

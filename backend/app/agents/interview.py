@@ -27,3 +27,9 @@ class InterviewAgent(BaseCareerAgent):
                 phase=2,
             )
         )
+
+    def create_crewai_agent(self, llm=None, verbose: bool = False):
+        """InterviewAgent is deferred to future phase."""
+        raise NotImplementedError(
+            "InterviewAgent is strictly deferred to future phase."
+        )

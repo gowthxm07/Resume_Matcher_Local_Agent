@@ -164,6 +164,10 @@ class ResumeProfile(BaseModel):
         return self.candidate_name or "Candidate"
 
     @property
+    def all_skills(self) -> List[str]:
+        return self.skills.all_skills if self.skills else []
+
+    @property
     def total_experience_years(self) -> float:
         """Estimate candidate total years of experience from work experience and internships."""
         if not self.work_experience and not self.internships:

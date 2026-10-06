@@ -288,6 +288,11 @@ class SkillNormalizer:
         t = re.sub(r"^[\s,\.;\(\)\[\]]+|[\s,\.;\(\)\[\]]+$", "", t)
         return t
 
+    @classmethod
+    def extract_and_normalize_skills(cls, text: str) -> List[str]:
+        """Classmethod convenience to find all canonical skills in text."""
+        return skill_normalizer.find_all_known_skills(text)
+
     def normalize(self, skill_text: str) -> str:
         """
         Map any skill string to its canonical equivalent if known.

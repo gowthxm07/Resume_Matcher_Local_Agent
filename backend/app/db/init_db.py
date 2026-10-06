@@ -8,7 +8,15 @@ from typing import Dict, Any, List
 from sqlalchemy import inspect, text
 from app.db.base import Base
 from app.db.session import engine
-from app.models import Resume, JobDescription, Project, Application, AnalysisRun, EvidenceRecord
+from app.models import (
+    Resume,
+    JobDescription,
+    Project,
+    Application,
+    AnalysisRun,
+    EvidenceRecord,
+    ResumeVersion,
+)
 from app.core.logging import logger
 
 
@@ -61,6 +69,7 @@ def check_db_health(target_engine=None) -> Dict[str, Any]:
             "applications",
             "analysis_runs",
             "evidence_records",
+            "resume_versions",
         ]
         all_present = all(t in existing_tables for t in expected_tables)
 

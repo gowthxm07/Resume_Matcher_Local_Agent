@@ -281,5 +281,131 @@ export interface BenchmarkComparisonResult {
   synthesis_insights: string[];
 }
 
+export interface FactualClaim {
+  claim_id: string;
+  text: string;
+  category: string;
+  section: string;
+  source: string;
+  evidence_ids: string[];
+  confidence: number;
+  status: "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONTRADICTED" | string;
+  notes?: string | null;
+}
+
+export interface OptimizationChange {
+  change_id: string;
+  section: string;
+  original_text: string;
+  proposed_text: string;
+  reason: string;
+  change_type: string;
+  evidence_ids: string[];
+  related_jd_requirements: string[];
+  expected_impact: string;
+  claims: FactualClaim[];
+  status: "PENDING" | "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONTRADICTED" | "ACCEPTED" | "REJECTED" | string;
+  rejection_reason?: string | null;
+  fact_check_status?: string;
+  fact_check_reason?: string;
+  grounding_evidence_ids?: string[];
+}
+
+export interface ATSValidationResult {
+  overall_ats_score: number;
+  parseability_score: number;
+  section_structure_score: number;
+  required_skill_coverage_score: number;
+  preferred_skill_coverage_score: number;
+  keyword_distribution_score: number;
+  formatting_safety_score: number;
+  identified_sections: string[];
+  missing_standard_sections: string[];
+  matched_required_skills: string[];
+  missing_required_skills: string[];
+  matched_preferred_skills: string[];
+  missing_preferred_skills: string[];
+  detected_stuffing_keywords: string[];
+  formatting_hazards: string[];
+  is_ats_compliant: boolean;
+  disclaimer: string;
+}
+
+export interface ResumeVersionSchema {
+  id: string;
+  resume_id: string;
+  parent_version_id?: string | null;
+  analysis_id?: string | null;
+  iteration: number;
+  content: string;
+  match_score?: number | null;
+  ats_score?: number | null;
+  evidence_confidence?: number | null;
+  status: "ORIGINAL" | "CANDIDATE" | "ACCEPTED" | "REJECTED" | "FINAL" | string;
+  change_summary?: Record<string, any>;
+  audit_trail: Record<string, any>[];
+  created_at: string;
+}
+
+export interface OptimizationIterationResult {
+  iteration: number;
+  proposals_count: number;
+  accepted_changes_count: number;
+  rejected_changes_count: number;
+  baseline_match_score: number;
+  iteration_match_score: number;
+  baseline_ats_score: number;
+  iteration_ats_score: number;
+  evidence_confidence_score: number;
+  status: string;
+  changes: OptimizationChange[];
+  rejected_claims: Record<string, any>[];
+}
+
+export interface OptimizationDossier {
+  analysis_id: string;
+  resume_id: string;
+  job_description_id: string;
+  baseline_version_id: string;
+  final_version_id: string;
+  iterations_run: number;
+  max_iterations: number;
+  baseline_match_score: number;
+  final_match_score: number;
+  baseline_ats_score: number;
+  final_ats_score: number;
+  baseline_evidence_confidence: number;
+  final_evidence_confidence: number;
+  total_proposed_changes: number;
+  total_accepted_changes: number;
+  total_rejected_changes: number;
+  accepted_changes: OptimizationChange[];
+  rejected_changes: OptimizationChange[];
+  audit_trail: Record<string, any>[];
+  ats_validation: ATSValidationResult;
+  iterations: OptimizationIterationResult[];
+  score_improvement: number;
+  ats_improvement: number;
+  disclaimer: string;
+  created_at: string;
+}
+
+export interface OptimizeRequest {
+  resume_id?: string | null;
+  job_description_id?: string | null;
+  project_ids?: string[];
+  max_iterations?: number;
+  raw_resume_text?: string | null;
+  raw_jd_text?: string | null;
+  use_live_llm?: boolean;
+}
+
+export interface OptimizeResponse {
+  run_id: string;
+  dossier: OptimizationDossier;
+  final_version: ResumeVersionSchema;
+  versions: ResumeVersionSchema[];
+}
+
 
 

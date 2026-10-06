@@ -27,6 +27,26 @@ from app.agents.tools.match_tools import (
     retrieve_skill_evidence_tool,
     get_match_tools,
 )
+from app.agents.tools.optimizer_tools import (
+    retrieve_match_analysis_tool,
+    retrieve_resume_claims_tool,
+    generate_optimization_proposal_tool,
+    get_optimizer_tools,
+)
+from app.agents.tools.fact_checker_tools import (
+    retrieve_claim_tool,
+    retrieve_evidence_tool,
+    compare_claim_evidence_tool,
+    get_fact_checker_tools,
+)
+from app.agents.tools.ats_tools import (
+    validate_resume_structure_tool,
+    calculate_keyword_coverage_tool,
+    validate_parseability_tool,
+    detect_keyword_stuffing_tool,
+    calculate_ats_score_tool,
+    get_ats_tools,
+)
 
 # Tool permissions boundary map
 ALLOWED_TOOL_NAMES = {
@@ -50,6 +70,45 @@ ALLOWED_TOOL_NAMES = {
         "retrieve_skill_evidence",
     },
     "Manager Agent": set(),  # Manager agent has zero technical tools (orchestration only)
+    "Resume Optimizer Agent": {
+        "retrieve_match_analysis",
+        "retrieve_resume_claims",
+        "retrieve_skill_evidence",
+        "generate_optimization_proposal",
+    },
+    "Impact-Driven Resume Optimizer": {
+        "retrieve_match_analysis",
+        "retrieve_resume_claims",
+        "retrieve_skill_evidence",
+        "generate_optimization_proposal",
+    },
+    "Fact Checker Agent": {
+        "retrieve_claim",
+        "retrieve_evidence",
+        "verify_skill",
+        "compare_claim_evidence",
+    },
+    "Strict Truth & Hallucination Auditor": {
+        "retrieve_claim",
+        "retrieve_evidence",
+        "verify_skill",
+        "compare_claim_evidence",
+    },
+    "ATS Validator Agent": {
+        "validate_resume_structure",
+        "calculate_keyword_coverage",
+        "validate_parseability",
+        "detect_keyword_stuffing",
+        "calculate_ats_score",
+    },
+    "Applicant Tracking System Emulator": {
+        "validate_resume_structure",
+        "calculate_keyword_coverage",
+        "validate_parseability",
+        "detect_keyword_stuffing",
+        "calculate_ats_score",
+    },
+    "Interview Agent": set(),
 }
 
 
@@ -91,6 +150,20 @@ __all__ = [
     "calculate_baseline_match_tool",
     "retrieve_skill_evidence_tool",
     "get_match_tools",
+    "retrieve_match_analysis_tool",
+    "retrieve_resume_claims_tool",
+    "generate_optimization_proposal_tool",
+    "get_optimizer_tools",
+    "retrieve_claim_tool",
+    "retrieve_evidence_tool",
+    "compare_claim_evidence_tool",
+    "get_fact_checker_tools",
+    "validate_resume_structure_tool",
+    "calculate_keyword_coverage_tool",
+    "validate_parseability_tool",
+    "detect_keyword_stuffing_tool",
+    "calculate_ats_score_tool",
+    "get_ats_tools",
     "ALLOWED_TOOL_NAMES",
     "verify_agent_tool_permissions",
     "get_tool_name",

@@ -52,6 +52,7 @@ class AnalysisRun(Base):
     resume = relationship("Resume", back_populates="analysis_runs")
     job_description = relationship("JobDescription", back_populates="analysis_runs")
     application = relationship("Application", back_populates="analysis_runs")
+    resume_versions = relationship("ResumeVersion", back_populates="analysis_run")
 
     def __repr__(self) -> str:
         return f"<AnalysisRun id={self.id} type={self.run_type} status={self.status} score={self.match_score}>"
