@@ -395,5 +395,55 @@ Every optimization execution produces persistent, immutable records in SQLite:
 - **Iteration 0**: Always created as `status="ORIGINAL"` to guarantee candidate baseline text is never lost or overwritten.
 - **Audit Trail**: Every proposed modification records `change_id`, `original_text`, `proposed_text`, `change_type`, `fact_check_status`, `reason`, and supporting `evidence_ids`.
 
+---
+
+## 12. Phase 6: Local Agent + Vercel Dashboard Product Architecture
+
+### 12.1 Separation of Responsibilities
+
+CareerCrew operates on a strict hybrid model separating UI presentation from private computation:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│             Vercel-Hosted Web Dashboard                │
+│              (Next.js 14 Presentation)                 │
+└───────────────────────────┬────────────────────────────┘
+                            │
+               Strict Localhost HTTP
+               (http://127.0.0.1:8000)
+                            │
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                 CAREERCREW LOCAL AGENT                 │
+│                                                        │
+│  • FastAPI REST Server (127.0.0.1:8000)                │
+│  • Deterministic Compatibility Service                 │
+│  • Ollama Llama 3.2:3b Local LLM Inference             │
+│  • Ollama nomic-embed-text Local Vector Embeddings     │
+│  • Multi-Agent CrewAI Orchestration Layer              │
+│  • SQLite Relational Database Engine                   │
+│  • ChromaDB Local Vector Store                         │
+│  • Read-Only Local Git Repository Scanner              │
+│  • Deterministic Fact-Checker & ATS Engine             │
+└────────────────────────────────────────────────────────┘
+```
+
+- **Vercel Cloud Role**: Hosts the compiled static assets and client-side React bundle. It does not run python, does not store documents, and cannot access candidate files.
+- **Local Agent Role**: Runs on `127.0.0.1:8000` on the candidate's machine. All PDF/DOCX ingestion, Git parsing, vector search, LLM prompts, and version diffs execute locally.
+
+### 12.2 Local Agent Endpoints
+
+The Local Agent exposes dedicated discovery and diagnostics endpoints under `/api/local-agent/*`:
+1. `GET /api/local-agent/health`: Lightweight liveness check (`{"agent": "careercrew-local-agent", "status": "ready", "version": "1.0.0", "api_version": "1", "local_only": true}`). Guaranteed zero leaks of paths, credentials, or tokens.
+2. `GET /api/local-agent/compatibility`: Executes deterministic diagnostics for Python, FastAPI, CrewAI, Ollama reachability, Llama 3.2:3b model, nomic-embed-text model, Git CLI, SQLite, ChromaDB, and Local Ports.
+3. `GET /api/local-agent/capabilities`: Negotiates feature capabilities with the frontend (`interview_intelligence: false` strictly deferred).
+
+### 12.3 Security Invariants
+
+- **Strict Localhost Binding**: Bound to `127.0.0.1` by default to prevent network exposure.
+- **Strict CORS Origin Whitelisting**: Wildcard `*` origins are rejected by Pydantic configuration validators. Allowed origins include local dev (`http://localhost:3000`) and authorized dashboard domains (`https://careercrew.vercel.app`).
+- **Read-Only Git Scans**: Operates exclusively in inspection mode; zero push or write permissions.
+- **Zero Cloud AI APIs**: Pydantic validators forbid OpenAI, Anthropic, Gemini, Bedrock, and Azure provider strings.
+
 
 

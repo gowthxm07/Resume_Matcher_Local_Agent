@@ -407,5 +407,49 @@ export interface OptimizeResponse {
   versions: ResumeVersionSchema[];
 }
 
+export type CompatibilityStatus =
+  | "READY"
+  | "MISSING"
+  | "OUTDATED"
+  | "ERROR"
+  | "OPTIONAL"
+  | "CHECKING";
+
+export interface CompatibilityCheckItem {
+  name: string;
+  status: CompatibilityStatus;
+  required: boolean;
+  detected_version?: string | null;
+  required_version?: string | null;
+  message: string;
+  setup_route?: string | null;
+}
+
+export interface CompatibilityResponse {
+  ready: boolean;
+  checks: CompatibilityCheckItem[];
+  agent_version: string;
+  timestamp: string;
+}
+
+export interface AgentHealthResponse {
+  agent: string;
+  status: string;
+  version: string;
+  api_version: string;
+  local_only: boolean;
+}
+
+export interface AgentCapabilitiesResponse {
+  analysis: boolean;
+  multi_agent: boolean;
+  evidence_scanning: boolean;
+  resume_optimization: boolean;
+  fact_checking: boolean;
+  ats_validation: boolean;
+  github_import: boolean;
+  interview_intelligence: boolean;
+}
+
 
 

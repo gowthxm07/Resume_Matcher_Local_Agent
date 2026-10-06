@@ -372,5 +372,44 @@ This script audits:
 11. Synthetic Scenario C (Inflated claims: unverified metrics stripped/repaired)
 12. Comprehensive Audit Trail & Persisted Analysis Run
 
+---
+
+## 12. Phase 6: Local Agent + Vercel Dashboard Verification & Endpoints
+
+### 12.1 Local Agent Endpoints
+
+```bash
+# 1. Health & Liveness
+curl http://127.0.0.1:8000/api/local-agent/health
+
+# 2. Deterministic Compatibility Diagnostics
+curl http://127.0.0.1:8000/api/local-agent/compatibility
+
+# 3. Active Capabilities Negotiation
+curl http://127.0.0.1:8000/api/local-agent/capabilities
+```
+
+### 12.2 Running Local Agent & Tests
+
+```bash
+# Start Local Agent
+cd backend
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Run all 173 backend tests
+pytest backend/tests
+
+# Run Phase 6 Local Agent test suite
+pytest backend/tests/test_local_agent.py -v
+
+# Run 15-point automated Phase 6 verification
+python scripts/verify_phase6.py
+
+# Frontend typecheck & production build
+cd frontend
+npm run typecheck
+npm run build
+```
+
 
 

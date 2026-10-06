@@ -12,15 +12,19 @@ import {
   Settings,
   ShieldCheck,
   Cpu,
+  Compass,
+  Shield,
 } from "lucide-react";
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Get Started", href: "/get-started", icon: Compass, tag: "Agent" },
   { name: "Resume", href: "/resume", icon: FileText, tag: "Phase 2" },
   { name: "Job Descriptions", href: "/job-descriptions", icon: Briefcase, tag: "Phase 2" },
-  { name: "Projects", href: "/projects", icon: GitBranch, tag: "Phase 2" },
+  { name: "Projects", href: "/projects", icon: GitBranch, tag: "Phase 3" },
   { name: "Applications", href: "/applications", icon: Layers, tag: "Phase 2" },
-  { name: "Analysis", href: "/analysis", icon: Sparkles, tag: "Phase 2" },
+  { name: "Analysis", href: "/analysis", icon: Sparkles, tag: "Phase 5" },
+  { name: "Privacy Center", href: "/privacy", icon: Shield, tag: "Local" },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

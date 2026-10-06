@@ -258,7 +258,19 @@ Open **http://localhost:3000** in your browser.
   - [x] REST endpoints: `POST /api/analysis/optimize`, `GET /api/resumes/{id}/versions`, `GET /api/analysis/{id}/audit`
   - [x] Interactive Next.js 14 Optimization UI: score progression tri-cards, anti-hallucination audit panel, ATS diagnostics, version switcher, diff viewer
   - [x] 156/156 automated tests passing + 12/12 Phase 5 verification checks passing (100%)
-- [ ] **Phase 6: Grounded Interview Preparation & Job Application Tracking**
+- [x] **Phase 6: CareerCrew Local Agent + Vercel Dashboard Product Architecture**
+  - [x] Packaging and formalization of CareerCrew Local Agent runtime (`/api/local-agent/*`)
+  - [x] Standardized health endpoint (`GET /api/local-agent/health`) with zero path/credential exposure
+  - [x] Deterministic compatibility diagnostic engine (`GET /api/local-agent/compatibility`) checking 11 system components
+  - [x] Feature capabilities negotiation endpoint (`GET /api/local-agent/capabilities`) with honest interview boundary
+  - [x] Security invariants: strict localhost binding (`127.0.0.1:8000`), no wildcard CORS (`*` prohibited), read-only Git scanning, zero external cloud AI APIs
+  - [x] Persistent Local Agent connection status indicator (`Header.tsx`) across all dashboard views
+  - [x] Interactive Onboarding & Setup wizard (`/get-started`) with live diagnostics, re-check button, and OS setup guides
+  - [x] Dedicated Privacy Center (`/privacy`) with architecture data flow diagram, data processing matrix, and technical disclosures
+  - [x] Enhanced Projects UI (`/projects`) with local repository and GitHub clone connection tabs
+  - [x] Vercel deployment architecture documented (`docs/VERCEL_DEPLOYMENT.md`) and verified (12/12 static routes compiled)
+  - [x] 173/173 automated backend tests passing + 15/15 Phase 6 verification checks passing (100%)
+- [ ] **Phase 7: Grounded Interview Preparation & Job Application Tracking**
   - [ ] Activate `InterviewAgent` for evidence-grounded STAR behavioral questions and technical deep dives
   - [ ] Implement Job Application lifecycle tracking (`/applications`)
   - [ ] Export optimized resumes to PDF and DOCX formats

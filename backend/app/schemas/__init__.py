@@ -94,6 +94,14 @@ from app.schemas.optimization import (
     OptimizeResponse,
 )
 
+from app.schemas.local_agent import (
+    CompatibilityStatus,
+    CompatibilityCheckItem,
+    CompatibilityResponse,
+    AgentHealthResponse,
+    AgentCapabilitiesResponse,
+)
+
 __all__ = [
     "HealthResponse",
     "OllamaStatus",
@@ -168,5 +176,11 @@ __all__ = [
     "OptimizationDossier",
     "OptimizeRequest",
     "OptimizeResponse",
+    "CompatibilityStatus",
+    "CompatibilityCheckItem",
+    "CompatibilityResponse",
+    "AgentHealthResponse",
+    "AgentCapabilitiesResponse",
 ]
+
 

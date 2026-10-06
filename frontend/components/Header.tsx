@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchSystemStatus } from "@/lib/api";
-import { SystemStatusResponse } from "@/types";
+import Link from "next/link";
+import { fetchLocalAgentHealth, fetchSystemStatus } from "@/lib/api";
+import { AgentHealthResponse, SystemStatusResponse } from "@/types";
 import {
-  Activity,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 export default function Header() {
+  const [agentHealth, setAgentHealth] = useState<AgentHealthResponse | null>(null);
   const [status, setStatus] = useState<SystemStatusResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -21,9 +22,24 @@ export default function Header() {
   const checkStatus = async () => {
     try {
       setRefreshing(true);
-      const data = await fetchSystemStatus();
-      setStatus(data);
+      const [agentRes, sysRes] = await Promise.allSettled([
+        fetchLocalAgentHealth(),
+        fetchSystemStatus(),
+      ]);
+
+      if (agentRes.status === "fulfilled") {
+        setAgentHealth(agentRes.value);
+      } else {
+        setAgentHealth(null);
+      }
+
+      if (sysRes.status === "fulfilled") {
+        setStatus(sysRes.value);
+      } else {
+        setStatus(null);
+      }
     } catch {
+      setAgentHealth(null);
       setStatus(null);
     } finally {
       setLoading(false);
@@ -33,25 +49,41 @@ export default function Header() {
 
   useEffect(() => {
     checkStatus();
-    const interval = setInterval(checkStatus, 30000);
+    const interval = setInterval(checkStatus, 15000);
     return () => clearInterval(interval);
   }, []);
 
+  const agentConnected = agentHealth?.status === "ready";
   const ollamaOk = status?.ollama.reachable && status?.ollama.model_exists;
   const dbOk = status?.database.connected;
-  const vsOk = status?.vector_store.status === "healthy";
 
   return (
     <header className="h-16 border-b border-surface-border bg-surface/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-mono uppercase tracking-widest text-slate-500">
-          CareerCrew Core
-        </span>
-        <span className="text-slate-600">/</span>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-xs font-medium text-slate-300">Phase 1 Architecture Active</span>
-        </div>
+        {/* Local Agent Persistent Indicator */}
+        <Link
+          href="/get-started"
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all ${
+            agentConnected
+              ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40"
+              : "bg-red-950/40 border-red-500/40 text-red-300 hover:bg-red-900/40 animate-pulse"
+          }`}
+          title="Click to view Local Agent compatibility diagnostics"
+        >
+          {agentConnected ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>LOCAL AGENT CONNECTED</span>
+              <span className="text-[10px] text-emerald-500 font-mono">v{agentHealth?.version}</span>
+            </>
+          ) : (
+            <>
+              <span className="w-2 h-2 rounded-full bg-red-400"></span>
+              <span>LOCAL AGENT OFFLINE</span>
+              <span className="text-[10px] underline ml-1">Setup</span>
+            </>
+          )}
+        </Link>
       </div>
 
       <div className="flex items-center gap-3">
@@ -79,11 +111,15 @@ export default function Header() {
           )}
         </div>
 
-        {/* Offline Guard Pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-800/60 text-xs font-mono text-emerald-300">
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden lg:inline">Offline Ready</span>
-        </div>
+        {/* Privacy Center Link Pill */}
+        <Link
+          href="/privacy"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-800/60 text-xs font-mono text-indigo-300 hover:bg-indigo-900/40 transition-colors"
+          title="Privacy Architecture Center"
+        >
+          <Shield className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="hidden lg:inline">Privacy: 100% Local</span>
+        </Link>
 
         {/* Refresh button */}
         <button

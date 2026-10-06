@@ -34,6 +34,7 @@ export default function ProjectsPage() {
 
   // Registration modal state
   const [showModal, setShowModal] = useState(false);
+  const [registerTab, setRegisterTab] = useState<"local" | "github">("local");
   const [formName, setFormName] = useState("");
   const [formPath, setFormPath] = useState("");
   const [formDesc, setFormDesc] = useState("");
@@ -279,8 +280,17 @@ export default function ProjectsPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-xs font-semibold text-white truncate">{proj.name}</h3>
+                          {proj.evidence_count > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
+                              🟢 Verified
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
+                              ⚪ Unscanned
+                            </span>
+                          )}
                           {proj.git_branch && (
                             <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-mono flex items-center gap-1">
                               <GitBranch className="w-2.5 h-2.5 text-indigo-400" />
@@ -289,7 +299,7 @@ export default function ProjectsPage() {
                           )}
                         </div>
                         <p className="text-[11px] text-slate-400 font-mono truncate mt-1">
-                          {proj.repo_path}
+                          Repository: {proj.repo_path}
                         </p>
                       </div>
 
@@ -306,15 +316,20 @@ export default function ProjectsPage() {
                       </button>
                     </div>
 
-                    {/* Git Details */}
-                    <div className="mt-2.5 flex items-center gap-3 text-[10px] text-slate-400 font-mono">
-                      {proj.head_commit && (
-                        <span>commit {proj.head_commit.slice(0, 7)}</span>
-                      )}
-                      <span>{proj.commit_count || 0} commits</span>
-                      <span className="text-indigo-400 font-sans font-medium">
-                        {proj.evidence_count} evidence items
-                      </span>
+                    {/* Git Details & Telemetry */}
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 text-[10px] text-slate-400 font-mono pt-2 border-t border-slate-800/60">
+                      <div>
+                        HEAD: <span className="text-slate-200">{proj.head_commit ? proj.head_commit.slice(0, 7) : "N/A"}</span>
+                      </div>
+                      <div>
+                        Evidence: <span className="text-indigo-400 font-bold">{proj.evidence_count} records</span>
+                      </div>
+                      <div>
+                        Commits: <span className="text-slate-200">{proj.commit_count || 0}</span>
+                      </div>
+                      <div>
+                        Last Scan: <span className="text-slate-300">{proj.last_scanned_at ? new Date(proj.last_scanned_at).toLocaleDateString() : "Pending"}</span>
+                      </div>
                     </div>
 
                     {/* Detected Tech Badges */}
@@ -468,10 +483,49 @@ export default function ProjectsPage() {
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
-              Provide an absolute path to a local Git software repository on your system.
-              CareerCrew runs read-only inspections with zero cloud APIs.
-            </p>
+            {/* Modal Tabs */}
+            <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setRegisterTab("local")}
+                className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
+                  registerTab === "local"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Local Directory
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegisterTab("github")}
+                className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
+                  registerTab === "github"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Connect via GitHub
+              </button>
+            </div>
+
+            {registerTab === "github" ? (
+              <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-800/40 text-[11px] text-indigo-300 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-indigo-200">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>GitHub Local Agent Architecture</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed">
+                  Provide your local clone directory of the GitHub repository.
+                  Analysis occurs strictly locally on your machine—no source code or credentials ever leave localhost or touch Vercel.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Provide an absolute path to a local Git software repository on your system.
+                CareerCrew runs read-only inspections with zero cloud APIs.
+              </p>
+            )}
 
             {modalError && (
               <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
@@ -489,20 +543,20 @@ export default function ProjectsPage() {
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. AI Customer Support Bot"
+                  placeholder={registerTab === "github" ? "e.g. Resume_Matcher_Local_Agent" : "e.g. AI Customer Support Bot"}
                   className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
                 <label className="block text-slate-300 font-medium mb-1">
-                  Local Filesystem Absolute Path
+                  {registerTab === "github" ? "Local Clone Path on Machine" : "Local Filesystem Absolute Path"}
                 </label>
                 <input
                   type="text"
                   value={formPath}
                   onChange={(e) => setFormPath(e.target.value)}
-                  placeholder="e.g. D:\Projects\ai-support-bot or /home/alex/projects/app"
+                  placeholder="e.g. D:\Resume Agent or /home/alex/projects/app"
                   className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 font-mono text-[11px] focus:outline-none focus:border-indigo-500"
                 />
                 <span className="text-[10px] text-slate-500 mt-0.5 block">

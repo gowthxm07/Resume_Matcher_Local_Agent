@@ -93,5 +93,8 @@ async def root():
         "mode": "privacy-first-local",
         "documentation": "/docs",
         "health": "/api/health",
+        "local_agent_health": "/api/local-agent/health",
+        "compatibility": "/api/local-agent/compatibility",
+        "capabilities": "/api/local-agent/capabilities",
         "system_status": "/api/system/status",
     }

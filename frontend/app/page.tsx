@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchSystemStatus, fetchDatabaseSummary } from "@/lib/api";
-import { SystemStatusResponse, DatabaseSummary } from "@/types";
+import Link from "next/link";
+import { fetchSystemStatus, fetchDatabaseSummary, fetchLocalAgentHealth } from "@/lib/api";
+import { SystemStatusResponse, DatabaseSummary, AgentHealthResponse } from "@/types";
 import SystemStatusBadge from "@/components/SystemStatusBadge";
 import EmptyStateCard from "@/components/EmptyStateCard";
 import AgentArchitectureGrid from "@/components/AgentArchitectureGrid";
@@ -17,21 +18,28 @@ import {
   Cpu,
   Lock,
   WifiOff,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const [status, setStatus] = useState<SystemStatusResponse | null>(null);
   const [dbSummary, setDbSummary] = useState<DatabaseSummary | null>(null);
+  const [agentHealth, setAgentHealth] = useState<AgentHealthResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    Promise.allSettled([fetchSystemStatus(), fetchDatabaseSummary()]).then(
-      ([statusRes, dbRes]) => {
-        if (statusRes.status === "fulfilled") setStatus(statusRes.value);
-        if (dbRes.status === "fulfilled") setDbSummary(dbRes.value);
-        setLoading(false);
-      }
-    );
+    Promise.allSettled([
+      fetchSystemStatus(),
+      fetchDatabaseSummary(),
+      fetchLocalAgentHealth(),
+    ]).then(([statusRes, dbRes, agentRes]) => {
+      if (statusRes.status === "fulfilled") setStatus(statusRes.value);
+      if (dbRes.status === "fulfilled") setDbSummary(dbRes.value);
+      if (agentRes.status === "fulfilled") setAgentHealth(agentRes.value);
+      setLoading(false);
+    });
   }, []);
 
   return (
@@ -75,6 +83,57 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Local Agent Connection Banner */}
+      <section>
+        {agentHealth?.status === "ready" ? (
+          <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <div>
+                <span className="text-white font-bold">LOCAL AGENT CONNECTED</span>
+                <span className="text-emerald-400 ml-2">(v{agentHealth.version})</span>
+                <span className="text-slate-400 block sm:inline sm:ml-3 font-sans">
+                  AI Inference, Git scanning, and SQLite running locally on 127.0.0.1. Zero data leaves your machine.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/get-started"
+                className="px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 border border-emerald-700/60 transition-colors"
+              >
+                Compatibility Diagnostics
+              </Link>
+              <Link
+                href="/privacy"
+                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors"
+              >
+                Privacy Center
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-red-950/30 border border-red-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></span>
+              <div>
+                <span className="text-white font-bold font-mono">LOCAL AGENT OFFLINE</span>
+                <p className="text-red-200/90 mt-0.5">
+                  The CareerCrew Local Agent is not responding at http://127.0.0.1:8000. Start your local agent to enable local AI intelligence.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/get-started"
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-2 shrink-0 transition-colors"
+            >
+              <span>Setup Local Agent</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+      </section>
 
       {/* Real-time Host System Telemetry */}
       <section>

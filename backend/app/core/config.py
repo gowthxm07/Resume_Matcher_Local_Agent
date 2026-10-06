@@ -26,12 +26,14 @@ class Settings(BaseSettings):
 
     # Core Application Settings
     APP_NAME: str = "CareerCrew Backend"
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = "1.0.0"
+    AGENT_NAME: str = "careercrew-local-agent"
+    AGENT_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
 
-    # Server Settings
+    # Server Settings (Localhost binding)
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     CORS_ORIGINS: List[str] = [
@@ -39,6 +41,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "https://careercrew.vercel.app",
     ]
 
     # Local LLM Provider (Ollama only - no external paid APIs permitted)
@@ -74,6 +77,20 @@ class Settings(BaseSettings):
                 "Only local providers (e.g., 'ollama') are supported."
             )
         return normalized
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """Prohibit wildcard '*' CORS origin to safeguard local agent security."""
+        if isinstance(v, str):
+            origins = [o.strip() for o in v.split(",") if o.strip()]
+        else:
+            origins = list(v)
+        if "*" in origins:
+            raise ValueError(
+                "Wildcard '*' CORS origin is strictly prohibited for CareerCrew privacy architecture."
+            )
+        return origins
 
     @property
     def resumes_dir(self) -> Path:
