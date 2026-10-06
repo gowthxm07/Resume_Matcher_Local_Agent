@@ -411,5 +411,37 @@ npm run typecheck
 npm run build
 ```
 
+---
+
+## 13. Phase 7: Production Validation, End-to-End Acceptance & Fresh-User Readiness
+
+### 13.1 One-Click Launchers
+CareerCrew provides cross-platform launch scripts:
+- Windows Command Prompt: `start_careercrew.bat`
+- Windows PowerShell: `.\start_careercrew.ps1`
+
+### 13.2 Running Phase 7 Test Suite & Verification Audit
+```bash
+# 1. Run Phase 7 End-to-End Acceptance Tests
+pytest backend/tests/test_phase7_e2e_acceptance.py -v
+
+# 2. Run full 180-test regression suite
+pytest backend/tests -q
+
+# 3. Run 22-point automated Phase 7 verification audit
+python scripts/verify_phase7.py
+
+# 4. Frontend verification
+cd frontend
+npm run typecheck
+npm run build
+```
+
+### 13.3 Acceptance Artifacts
+- Developer Walkthrough: `docs/END_TO_END_TEST.md`
+- Candidate User Guide: `docs/USER_GUIDE.md`
+- Live Demonstration Script: `docs/DEMO_SCRIPT.md`
+- Milestone Report: `docs/PHASE_7_REPORT.md`
+
 
 

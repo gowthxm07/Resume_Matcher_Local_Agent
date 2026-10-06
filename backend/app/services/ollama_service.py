@@ -198,6 +198,58 @@ class OllamaService:
                 "error": err_msg,
             }
 
+    async def embed(self, text: str, model: Optional[str] = None) -> List[float]:
+        """
+        Generate local embeddings vector via Ollama nomic-embed-text.
+        Zero data leaves the local machine.
+        """
+        target_model = model or settings.OLLAMA_EMBED_MODEL
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(
+                    f"{self.base_url}/api/embeddings",
+                    json={"model": target_model, "prompt": text},
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    return data.get("embedding", [])
+                logger.error(f"Ollama embeddings call failed with HTTP {res.status_code}")
+                return []
+        except Exception as exc:
+            logger.error(f"Error during Ollama embedding generation: {exc}")
+            return []
+
+    async def smoke_test(self) -> Dict[str, Any]:
+        """
+        Lightweight smoke test confirming:
+        1. Ollama is reachable
+        2. LLM can generate a brief response
+        3. Embedding model can produce a vector
+        """
+        start = time.perf_counter()
+        availability = await self.check_availability()
+        if not availability["reachable"]:
+            return {
+                "inference_ok": False,
+                "embedding_ok": False,
+                "error": availability.get("error") or "Ollama unreachable",
+            }
+
+        gen_res = await self.generate(
+            prompt="Respond with OK.",
+            temperature=0.1,
+            max_tokens=5,
+        )
+        embed_vec = await self.embed("CareerCrew smoke test")
+
+        return {
+            "inference_ok": gen_res["success"],
+            "embedding_ok": len(embed_vec) > 0,
+            "dimensions": len(embed_vec),
+            "latency_ms": round((time.perf_counter() - start) * 1000.0, 2),
+            "error": gen_res.get("error") if not gen_res["success"] else None,
+        }
+
 
 # Singleton service instance
 ollama_service = OllamaService()

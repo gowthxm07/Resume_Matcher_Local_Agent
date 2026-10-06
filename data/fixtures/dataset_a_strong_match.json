@@ -1,0 +1,15 @@
+{
+  "dataset_id": "DATASET_A_STRONG_MATCH",
+  "description": "Candidate with direct codebase evidence corroborating major JD requirements (FastAPI, Python, PostgreSQL, Docker, Git).",
+  "candidate_name": "Alex Developer",
+  "resume_text": "Alex Developer\nalex.developer@example.com\n\nPROFESSIONAL SUMMARY\nSenior Backend Engineer with 5+ years of experience designing and operating resilient microservice architectures using Python, FastAPI, and PostgreSQL. Proven track record in Docker containerization and Git workflows.\n\nTECHNICAL SKILLS\n- Languages: Python, SQL\n- Frameworks: FastAPI, SQLAlchemy\n- Databases: PostgreSQL\n- DevOps & Tools: Docker, Git, REST APIs, Microservices\n\nWORK EXPERIENCE\nSenior Software Engineer | TechFlow Systems (2022 - Present)\n- Designed and deployed scalable asynchronous REST APIs utilizing FastAPI and Python.\n- Managed high-concurrency PostgreSQL relational schemas and query optimizations.\n- Containerized backend microservices with multi-stage Docker builds.\n\nPROJECTS\nHigh-Performance API Gateway\n- Built an asynchronous API routing gateway with Python and FastAPI.\n- Utilized PostgreSQL for persistent configuration caching and Docker for deployment.",
+  "jd_title": "Senior Python Backend Engineer",
+  "jd_text": "Position: Senior Python Backend Engineer\nCompany: CorePlatform Cloud Solutions\n\nAbout the Role:\nWe are seeking a Senior Python Backend Engineer to build high-performance distributed microservices.\n\nRequirements:\n- Strong proficiency in Python\n- Production experience with FastAPI\n- Deep relational database experience with PostgreSQL\n- Familiarity with Git version control and REST APIs\n\nPreferred Qualifications:\n- Docker containerization\n- Asynchronous architecture and microservices",
+  "target_repo": "backend/tests/fixtures/repos/python_fastapi_backend",
+  "expected_evaluation": {
+    "expected_score_range": [75.0, 95.0],
+    "verified_skills": ["python", "fastapi", "git", "postgresql"],
+    "missing_required_skills": [],
+    "hallucination_expected": false
+  }
+}

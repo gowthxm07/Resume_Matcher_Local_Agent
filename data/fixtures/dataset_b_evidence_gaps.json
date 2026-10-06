@@ -1,0 +1,16 @@
+{
+  "dataset_id": "DATASET_B_EVIDENCE_GAPS",
+  "description": "Candidate with frontend background applying for senior cloud infrastructure role. Evidence strictly disproves/lacks cloud skills; ungrounded metric claims must be rejected.",
+  "candidate_name": "Jordan Frontend",
+  "resume_text": "Jordan Frontend\njordan.frontend@example.com\n\nPROFESSIONAL SUMMARY\nFrontend Developer specialized in React, Next.js, and TypeScript. Claimed to achieve 10x throughput scaling on AWS with 99.999% uptime.\n\nTECHNICAL SKILLS\n- Languages: TypeScript, JavaScript, HTML, CSS\n- Frameworks: React, Next.js, Tailwind CSS\n- Tools: Git, npm, Webpack\n\nWORK EXPERIENCE\nFrontend Specialist | WebDesign Studio (2023 - Present)\n- Developed responsive user interfaces using React and Next.js.\n- Handled client-side state management with TypeScript.\n\nPROJECTS\nPortfolio Showcase\n- Static portfolio website built with Next.js and React.",
+  "jd_title": "Lead Cloud Infrastructure & Kubernetes Architect",
+  "jd_text": "Position: Lead Cloud Infrastructure & Kubernetes Architect\nCompany: Enterprise Cloud Scale\n\nRequirements:\n- Extensive production experience with AWS cloud infrastructure\n- Advanced container orchestration with Kubernetes and Helm\n- Infrastructure as Code using Terraform\n- Deep understanding of distributed systems architecture\n\nPreferred:\n- Golang or Python systems programming",
+  "target_repo": "backend/tests/fixtures/repos/react_nextjs_app",
+  "expected_evaluation": {
+    "expected_score_range": [15.0, 45.0],
+    "verified_skills": ["git", "react", "next.js"],
+    "missing_required_skills": ["aws", "kubernetes", "terraform", "distributed systems"],
+    "hallucination_expected": false,
+    "metric_stripping_expected": true
+  }
+}
