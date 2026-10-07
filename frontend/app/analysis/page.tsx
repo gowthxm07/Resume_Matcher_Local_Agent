@@ -545,7 +545,7 @@ export default function AnalysisPage() {
       {dossier && activeAnalysisMode === "crew" && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Multi-Agent Header Banner */}
-          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-indigo-500/40 shadow-2xl">
+          <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border shadow-xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-surface-border">
               <div className="flex items-center gap-5">
                 <div className="relative w-24 h-24 rounded-2xl bg-slate-950 border border-indigo-500/30 flex flex-col items-center justify-center shrink-0 shadow-inner">
@@ -668,7 +668,7 @@ export default function AnalysisPage() {
 
       {/* Comparative Benchmark View */}
       {benchmarkResult && activeAnalysisMode === "benchmark" && (
-        <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-emerald-500/40 shadow-2xl space-y-6 animate-in fade-in duration-300">
+        <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border shadow-xl space-y-6 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
             <div className="flex items-center gap-3">
               <Scale className="w-6 h-6 text-emerald-400" />
@@ -755,7 +755,7 @@ export default function AnalysisPage() {
       {optimizationResult && activeAnalysisMode === "optimization" && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Hero Banner: Optimization Dossier & Score Progression */}
-          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-purple-500/40 shadow-2xl space-y-6">
+          <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border shadow-xl space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-surface-border">
               <div className="flex items-center gap-5">
                 <div className="relative w-24 h-24 rounded-2xl bg-slate-950 border border-purple-500/30 flex flex-col items-center justify-center shrink-0 shadow-inner">
@@ -1273,7 +1273,7 @@ export default function AnalysisPage() {
       {result && activeAnalysisMode === "baseline" && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {/* Hero Overview Card */}
-          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-surface to-slate-900 border border-surface-border shadow-2xl">
+          <div className="p-6 md:p-8 rounded-2xl bg-surface border border-surface-border shadow-xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-surface-border">
               <div className="flex items-center gap-5">
                 {/* Match Score Radial Display */}

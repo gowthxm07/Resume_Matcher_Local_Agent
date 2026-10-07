@@ -8,10 +8,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "#090d16",
-        surface: "#101726",
-        "surface-border": "#1e293b",
-        "surface-hover": "#172238",
+        background: "#090a0f",
+        surface: "#111218",
+        "surface-border": "#1f212a",
+        "surface-hover": "#181a22",
         primary: {
           50: "#eef2ff",
           100: "#e0e7ff",

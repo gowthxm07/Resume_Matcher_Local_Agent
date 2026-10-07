@@ -79,7 +79,14 @@ export default function PrivacyPage() {
   ];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 max-w-5xl mx-auto p-4 sm:p-6 pb-12">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors font-mono"
+      >
+        <span>&larr; Back to CareerCrew Agent</span>
+      </Link>
+
       {/* Header Banner */}
       <div className="border border-surface-border rounded-xl bg-surface/60 backdrop-blur p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">

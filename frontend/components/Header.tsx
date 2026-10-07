@@ -2,48 +2,37 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { fetchLocalAgentHealth, fetchSystemStatus } from "@/lib/api";
-import { AgentHealthResponse, SystemStatusResponse } from "@/types";
+import { fetchLocalAgentHealth, fetchProjects } from "@/lib/api";
+import { AgentHealthResponse, ProjectResponse } from "@/types";
+import CompatibilityModal from "@/components/CompatibilityModal";
+import ProjectsModal from "@/components/ProjectsModal";
+import PrivacyModal from "@/components/PrivacyModal";
 import {
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  HardDrive,
+  FolderGit2,
   Shield,
-  Bot,
+  RefreshCw,
+  Terminal,
 } from "lucide-react";
 
 export default function Header() {
-  const [agentHealth, setAgentHealth] = useState<AgentHealthResponse | null>(null);
-  const [status, setStatus] = useState<SystemStatusResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [health, setHealth] = useState<AgentHealthResponse | null>(null);
+  const [projectCount, setProjectCount] = useState<number>(0);
+  const [isCompOpen, setIsCompOpen] = useState(false);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const checkStatus = async () => {
     try {
-      setRefreshing(true);
-      const [agentRes, sysRes] = await Promise.allSettled([
+      const [healthRes, projectsRes] = await Promise.allSettled([
         fetchLocalAgentHealth(),
-        fetchSystemStatus(),
+        fetchProjects(),
       ]);
+      if (healthRes.status === "fulfilled") setHealth(healthRes.value);
+      else setHealth(null);
 
-      if (agentRes.status === "fulfilled") {
-        setAgentHealth(agentRes.value);
-      } else {
-        setAgentHealth(null);
-      }
-
-      if (sysRes.status === "fulfilled") {
-        setStatus(sysRes.value);
-      } else {
-        setStatus(null);
-      }
+      if (projectsRes.status === "fulfilled") setProjectCount(projectsRes.value.length);
     } catch {
-      setAgentHealth(null);
-      setStatus(null);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setHealth(null);
     }
   };
 
@@ -53,84 +42,89 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  const agentConnected = agentHealth?.status === "ready";
-  const ollamaOk = status?.ollama.reachable && status?.ollama.model_exists;
-  const dbOk = status?.database.connected;
+  const isReady = health?.status === "ready";
 
   return (
-    <header className="h-16 border-b border-surface-border bg-surface/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-10">
-      <div className="flex items-center gap-3">
-        {/* Local Agent Persistent Indicator */}
-        <Link
-          href="/get-started"
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all ${
-            agentConnected
-              ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40"
-              : "bg-red-950/40 border-red-500/40 text-red-300 hover:bg-red-900/40 animate-pulse"
-          }`}
-          title="Click to view Local Agent compatibility diagnostics"
-        >
-          {agentConnected ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>LOCAL AGENT CONNECTED</span>
-              <span className="text-[10px] text-emerald-500 font-mono">v{agentHealth?.version}</span>
-            </>
-          ) : (
-            <>
-              <span className="w-2 h-2 rounded-full bg-red-400"></span>
-              <span>LOCAL AGENT OFFLINE</span>
-              <span className="text-[10px] underline ml-1">Setup</span>
-            </>
-          )}
-        </Link>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {/* Ollama Status Pill */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-mono">
-          <Bot className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-slate-400">LLM:</span>
-          <span className="text-slate-200">llama3.2:3b</span>
-          {ollamaOk ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-          )}
+    <>
+      <header className="h-14 border-b border-surface-border bg-surface/90 backdrop-blur-sm px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
+        {/* Brand */}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="flex items-center gap-2 group transition-opacity hover:opacity-90"
+          >
+            <span className="font-semibold text-sm tracking-tight text-white font-mono">
+              CareerCrew
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-surface-border">
+              local
+            </span>
+          </Link>
         </div>
 
-        {/* Database Status Pill */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-mono">
-          <HardDrive className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-slate-400">DB:</span>
-          <span className="text-slate-200">SQLite</span>
-          {dbOk ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-          )}
+        {/* Secondary Utility Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Compatibility Status Pill */}
+          <button
+            onClick={() => setIsCompOpen(true)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono font-medium transition-colors ${
+              isReady
+                ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-950/40"
+                : "bg-amber-950/20 border-amber-500/30 text-amber-300 hover:bg-amber-950/40"
+            }`}
+            title="Inspect Local Agent Compatibility"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isReady ? "bg-emerald-400" : "bg-amber-400 animate-pulse"
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {isReady ? "Local Agent Ready" : "Local Agent Offline"}
+            </span>
+            <span className="sm:hidden">{isReady ? "Ready" : "Offline"}</span>
+          </button>
+
+          {/* Projects Button */}
+          <button
+            onClick={() => setIsProjectsOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-surface-border bg-surface-hover/50 hover:bg-surface-hover text-zinc-300 hover:text-white text-xs transition-colors"
+            title="Manage connected project repositories"
+          >
+            <FolderGit2 className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Projects</span>
+            {projectCount > 0 && (
+              <span className="text-[10px] font-mono px-1 rounded bg-zinc-800 text-zinc-400">
+                {projectCount}
+              </span>
+            )}
+          </button>
+
+          {/* Privacy Button */}
+          <button
+            onClick={() => setIsPrivacyOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-surface-border bg-surface-hover/30 hover:bg-surface-hover text-zinc-400 hover:text-zinc-200 text-xs transition-colors"
+            title="Local privacy & air-gap architecture"
+          >
+            <Shield className="w-3.5 h-3.5 text-emerald-400/80" />
+            <span className="hidden md:inline">100% Local</span>
+          </button>
         </div>
+      </header>
 
-        {/* Privacy Center Link Pill */}
-        <Link
-          href="/privacy"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-950/40 border border-indigo-800/60 text-xs font-mono text-indigo-300 hover:bg-indigo-900/40 transition-colors"
-          title="Privacy Architecture Center"
-        >
-          <Shield className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="hidden lg:inline">Privacy: 100% Local</span>
-        </Link>
-
-        {/* Refresh button */}
-        <button
-          onClick={checkStatus}
-          disabled={refreshing}
-          className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 transition-colors"
-          title="Refresh System Status"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
-      </div>
-    </header>
+      {/* Modals */}
+      <CompatibilityModal
+        isOpen={isCompOpen}
+        onClose={() => setIsCompOpen(false)}
+      />
+      <ProjectsModal
+        isOpen={isProjectsOpen}
+        onClose={() => setIsProjectsOpen(false)}
+      />
+      <PrivacyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+      />
+    </>
   );
 }

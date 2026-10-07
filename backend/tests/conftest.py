@@ -4,6 +4,14 @@ Uses in-memory SQLite and isolated environments for test safety.
 """
 
 import os
+import sys
+from pathlib import Path
+
+# Ensure backend directory is in sys.path
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 import pytest
 from typing import Generator
 from fastapi.testclient import TestClient
